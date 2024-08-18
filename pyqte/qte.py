@@ -67,3 +67,5 @@ class QTEEstimator:
         plt.ylabel("QTE")
         plt.title("Quantile Treatment Effects")
         plt.show()
+
+from .data_loader import load_lalonde_data
