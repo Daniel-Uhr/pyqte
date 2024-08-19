@@ -266,3 +266,24 @@ def compute_diff_se(data, group_var, outcome_var):
     
     return diff_se
 
+def plot_qte(results):
+    """
+    Plot the Quantile Treatment Effects (QTE) results.
+
+    Parameters:
+    -----------
+    results : dict
+        A dictionary containing the QTE results with quantiles as keys
+        and the corresponding QTE as values.
+    """
+    quantiles = list(results['qte'].keys())
+    qte_values = list(results['qte'].values())
+    qte_se_values = list(results['qte.se'].values())
+
+    # Plotting the QTE values with error bars
+    plt.errorbar(quantiles, qte_values, yerr=qte_se_values, fmt='o', capsize=5)
+    plt.xlabel('Quantiles')
+    plt.ylabel('Quantile Treatment Effect (QTE)')
+    plt.title('Quantile Treatment Effects with Error Bars')
+    plt.grid(True)
+    plt.show()
