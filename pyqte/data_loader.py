@@ -138,34 +138,4 @@ def create_formula(dependent_var, independent_vars):
     formula_str = f"{dependent_var} ~ {' + '.join(independent_vars)}"
     return Formula(formula_str)
 
-def compute_diff_se(data, group_var, outcome_var):
-    """
-    Compute the standard errors for the difference in means between two groups.
-    
-    Parameters:
-    -----------
-    data : pandas.DataFrame
-        The dataset containing the variables.
-    group_var : str
-        The name of the group variable.
-    outcome_var : str
-        The name of the outcome variable.
-    
-    Returns:
-    --------
-    diff_se : float
-        The standard error of the difference in means.
-    """
-    group1 = data[data[group_var] == 1][outcome_var]
-    group2 = data[data[group_var] == 0][outcome_var]
-    
-    # Calcula as variâncias e os tamanhos dos grupos
-    var1 = np.var(group1, ddof=1)
-    var2 = np.var(group2, ddof=1)
-    n1 = len(group1)
-    n2 = len(group2)
-    
-    # Calcula o erro padrão da diferença
-    diff_se = np.sqrt(var1/n1 + var2/n2)
-    
-    return diff_se
+
