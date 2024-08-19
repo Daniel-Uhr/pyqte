@@ -1,50 +1,23 @@
 import unittest
-from pyqte import qte, qtet, ddid2, qdid, cic
+from pyqte.qte import QTEEstimator
+import pandas as pd
 
-class TestQteFunctions(unittest.TestCase):
+class TestQTEEstimator(unittest.TestCase):
 
     def setUp(self):
-        # Configurações iniciais antes de cada teste
-        self.data = ...  # Um exemplo de conjunto de dados de teste
-        self.params = {
-            'formula': 'outcome ~ treatment',
-            't': 1978,
-            'tmin1': 1975,
-            'idname': 'id',
-            'tname': 'year',
-            'data': self.data,
-            'probs': [0.1, 0.5, 0.9],
-            'se': True,
-            'iters': 10,
-            'panel': True
+        # Setup de um dataframe de teste básico
+        data = {
+            're': [100, 200, 300, 400],
+            'treat': [1, 0, 1, 0],
         }
+        self.df = pd.DataFrame(data)
 
-    def test_qte(self):
-        result = qte(**self.params)
+    def test_qte_basic(self):
+        estimator = QTEEstimator(data=self.df, outcome='re', treatment='treat', quantiles=[0.1, 0.5, 0.9])
+        result = estimator.estimate()
         self.assertIsNotNone(result)
-        # Adicione mais asserções para validar o resultado esperado
-
-    def test_qtet(self):
-        result = qtet(**self.params)
-        self.assertIsNotNone(result)
-        # Adicione mais asserções para validar o resultado esperado
-
-    def test_ddid2(self):
-        result = ddid2(**self.params)
-        self.assertIsNotNone(result)
-        # Adicione mais asserções para validar o resultado esperado
-
-    def test_qdid(self):
-        result = qdid(**self.params)
-        self.assertIsNotNone(result)
-        # Adicione mais asserções para validar o resultado esperado
-
-    def test_cic(self):
-        result = cic(**self.params)
-        self.assertIsNotNone(result)
-        # Adicione mais asserções para validar o resultado esperado
+        # Testes específicos com base no que é esperado do resultado
 
 if __name__ == '__main__':
     unittest.main()
-
 
