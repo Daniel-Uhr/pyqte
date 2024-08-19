@@ -1,12 +1,25 @@
-"""
-pyqte - A Python package for Quantile Treatment Effects
-
-This package provides various tools for estimating quantile treatment effects, including methods based on difference-in-differences, matching, and more.
-"""
-
 from .qte import QTEEstimator
 from .qtet import QTETEstimator
 from .qdid import QDiDEstimator
 from .cic import CiCEstimator
+from .mdid import MDiDEstimator
+from .spatt import SpATT
+from .helper_functions import compute_ci_qte, compute_panel_qtet, compute_diff_se, plot_qte
 
-__all__ = ["QTEEstimator", "QTETEstimator", "QDiDEstimator", "CiCEstimator"]
+__all__ = [
+    'QTEEstimator',
+    'QTETEstimator',
+    'QDiDEstimator',
+    'CiCEstimator',
+    'MDiDEstimator',
+    'SpATT',
+    'compute_ci_qte',
+    'compute_panel_qtet',
+    'compute_diff_se',
+    'plot_qte',
+]
+
+# Metadata
+__version__ = '0.1.0'
+__author__ = 'Daniel de Abreu Pereira Uhr'
+__email__ = 'daniel.uhr@gmail.com'
