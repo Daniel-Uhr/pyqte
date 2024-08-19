@@ -4,6 +4,7 @@ from .qdid import QDiDEstimator
 from .cic import CiCEstimator
 from .mdid import MDiDEstimator
 from .spatt import SpATT
+from .ddid2 import DDID2Estimator 
 from .helper_functions import compute_ci_qte, compute_panel_qtet, compute_diff_se, plot_qte
 
 __all__ = [
@@ -13,6 +14,7 @@ __all__ = [
     'CiCEstimator',
     'MDiDEstimator',
     'SpATT',
+    'DDID2Estimator',  # Incluindo DDID2Estimator
     'compute_ci_qte',
     'compute_panel_qtet',
     'compute_diff_se',
