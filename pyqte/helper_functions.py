@@ -192,4 +192,46 @@ def compute_ci_qte(data, outcome, treatment, covariates=None):
     }
     return ci_results
 
+def compute_panel_qtet(data, outcome, treatment, id_var, time_var, covariates=None):
+    """
+    Compute Panel QTET using the qte package.
+    
+    Parameters:
+    -----------
+    data : pandas.DataFrame
+        The dataset containing the outcome variable, treatment indicator, and covariates.
+    outcome : str
+        The name of the outcome variable.
+    treatment : str
+        The name of the treatment indicator variable.
+    id_var : str
+        The name of the individual identifier variable.
+    time_var : str
+        The name of the time variable.
+    covariates : list of str, optional
+        A list of covariate names to include in the model.
+    
+    Returns:
+    --------
+    qtet_results : dict
+        A dictionary containing the QTET results.
+    """
+    formula = f"{outcome} ~ {treatment}"
+    if covariates:
+        formula += " + " + " + ".join(covariates)
+    
+    formula = Formula(formula)
+    r_data = pandas2ri.py2rpy(data)
+    
+    qtet_results = qte.panel_qtet(formula, data=r_data, idname=id_var, tname=time_var)
+    
+    results = {
+        'qte': qtet_results.rx2('qte'),
+        'qte.se': qtet_results.rx2('qte.se'),
+        'ate': qtet_results.rx2('ate'),
+        'ate.se': qtet_results.rx2('ate.se')
+    }
+    
+    return results
+
 
