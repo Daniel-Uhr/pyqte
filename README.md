@@ -49,4 +49,4 @@ This project is licensed under the MIT License. See the LICENSE file for details
 Daniel de Abreu Pereira Uhr - daniel.uhr@gmail.com
 
 ## Acknowledgments
-I'd like to thank Brantly Callaway, the original author of the qte package in R (https://bcallaway11.github.io/qte/articles/R-QTEs.html), whose work this package relies on.
+I'd like to thank Brantly Callaway, the original author of the qte package in R (https://github.com/bcallaway11/qte), whose work this package relies on.
