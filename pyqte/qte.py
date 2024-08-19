@@ -70,7 +70,7 @@ class QTEEstimator:
             r_data = ro.conversion.py2rpy(self.data)
 
         # Call the qte function from the R qte package
-        result = qte.qte(
+        result = ci.qte(
             formula=self.formula,
             data=r_data,
             probs=ro.FloatVector(self.probs),
