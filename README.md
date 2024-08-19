@@ -14,7 +14,7 @@ pip install .
 
 Make sure you have R installed along with the qte package and rpy2.
 
-Usage
+## Usage
 Here’s a basic example of how to use pyqte to estimate Quantile Treatment Effects (QTE):
 
 ```
@@ -36,7 +36,8 @@ print(qte_results)
 # Plot the QTE
 qte_estimator.plot_qte(qte_results)
 ```
-Requirements
+## Requirements
+
 Python 3.6 or higher
 R with the qte package installed
 rpy2 for interfacing between Python and R
@@ -44,8 +45,8 @@ Other Python dependencies are listed in requirements.txt
 License
 This project is licensed under the MIT License. See the LICENSE file for details.
 
-Author
+## Author
 Daniel de Abreu Pereira Uhr - daniel.uhr@gmail.com
 
-Acknowledgments
-Special thanks to the original authors of the qte package in R, whose work this package relies on.
+## Acknowledgments
+I'd like to thank Brantly Callaway, the original author of the qte package in R (https://bcallaway11.github.io/qte/articles/R-QTEs.html), whose work this package relies on.
