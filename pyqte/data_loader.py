@@ -137,4 +137,3 @@ def create_formula(dependent_var, independent_vars):
     """
     formula_str = f"{dependent_var} ~ {' + '.join(independent_vars)}"
     return Formula(formula_str)
-
