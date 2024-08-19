@@ -1,4 +1,6 @@
 numpy
 pandas
-statsmodels
 matplotlib
+scipy
+statsmodels
+rpy2
