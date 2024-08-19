@@ -157,3 +157,39 @@ def generate_quantile_regression_results(model, quantiles):
         }
     return results
 
+def compute_ci_qte(data, outcome, treatment, covariates=None):
+    """
+    Compute confidence intervals for QTE using the qte package.
+    
+    Parameters:
+    -----------
+    data : pandas.DataFrame
+        The dataset containing the outcome variable, treatment indicator, and covariates.
+    outcome : str
+        The name of the outcome variable.
+    treatment : str
+        The name of the treatment indicator variable.
+    covariates : list of str, optional
+        A list of covariate names to include in the model.
+    
+    Returns:
+    --------
+    ci_results : dict
+        A dictionary containing the confidence intervals for each quantile.
+    """
+    formula = f"{outcome} ~ {treatment}"
+    if covariates:
+        formula += " + " + " + ".join(covariates)
+    
+    formula = Formula(formula)
+    r_data = pandas2ri.py2rpy(data)
+    
+    qte_results = qte.ci_qte(formula, data=r_data)
+    
+    ci_results = {
+        'lower_bound': qte_results.rx2('lowerBound'),
+        'upper_bound': qte_results.rx2('upperBound')
+    }
+    return ci_results
+
+
