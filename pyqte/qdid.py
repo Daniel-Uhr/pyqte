@@ -5,37 +5,37 @@ from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 from rpy2.robjects import Formula
 
-# Activate the automatic conversion of pandas DataFrames to R data.frames
+# Ativando a conversão automática de pandas DataFrames para R data.frames
 pandas2ri.activate()
 
-# Import the qte package from R
+# Importando o pacote qte do R
 qte = importr('qte')
 
 class QDiDEstimator:
     """
-    QDiDEstimator is used to estimate Quantile Difference-in-Differences (QDiD)
-    effects using the R 'qte' package via rpy2.
+    O QDiDEstimator é utilizado para estimar os efeitos Quantile Difference-in-Differences (QDiD)
+    utilizando o pacote 'qte' do R via rpy2.
     
-    Attributes:
-    -----------
+    Atributos:
+    ----------
     formula : str
-        The formula representing the relationship between the dependent and independent variables.
+        A fórmula representando a relação entre as variáveis dependentes e independentes.
     data : pandas.DataFrame
-        The dataset containing the variables used in the formula.
+        O dataset contendo as variáveis usadas na fórmula.
     t : int
-        The time period after treatment.
+        O período de tempo após o tratamento.
     tmin1 : int
-        The time period before treatment.
+        O período de tempo antes do tratamento.
     idname : str
-        The name of the column representing the unique identifier for each unit.
+        O nome da coluna representando o identificador único de cada unidade.
     tname : str
-        The name of the column representing the time periods.
+        O nome da coluna representando os períodos de tempo.
     probs : list
-        The list of quantiles at which to estimate the treatment effect.
+        A lista de quantis nos quais estimar o efeito do tratamento.
     se : bool
-        Whether to compute standard errors.
+        Se deve ou não calcular os erros padrão.
     iters : int
-        The number of bootstrap iterations to compute standard errors.
+        O número de iterações bootstrap para calcular os erros padrão.
     """
     
     def __init__(self, formula, data, t, tmin1, idname, tname, probs=[0.05, 0.5, 0.95], se=True, iters=100):
@@ -49,19 +49,27 @@ class QDiDEstimator:
         self.se = se
         self.iters = iters
 
-def estimate(self):
-        # Convert the pandas DataFrame to an R data.frame
+    def estimate(self):
+        """
+        Estima os efeitos do QDiD.
+
+        Retorna:
+        --------
+        results : dict
+            Um dicionário contendo os efeitos estimados do QDiD e, se solicitado, os erros padrão.
+        """
+        # Converter o pandas DataFrame para um R data.frame
         r_data = pandas2ri.py2rpy(self.data)
 
-        # Prepare the formula for R
+        # Preparar a fórmula para R
         r_formula = Formula(self.formula)
 
-        # Call the qdid function from the R 'qte' package
+        # Chama a função QDiD do pacote qte do R
         qdid_result = qte.QDiD(r_formula, data=r_data, t=self.t, tmin1=self.tmin1,
                                idname=self.idname, tname=self.tname, probs=ro.FloatVector(self.probs),
                                se=self.se, iters=self.iters)
 
-        # Extract the results into a dictionary
+        # Extrair os resultados em um dicionário
         results = {
             'qdid': np.array(qdid_result.rx2('QTE')),
             'probs': self.probs
@@ -74,12 +82,12 @@ def estimate(self):
 
     def summary(self):
         """
-        Provide a summary of the QDiD estimation results.
+        Fornece um resumo dos resultados de estimativa QDiD.
         
-        Returns:
+        Retorna:
         --------
         summary : str
-            A textual summary of the QDiD results.
+            Um resumo textual dos resultados do QDiD.
         """
         results = self.estimate()
         summary_str = "Quantile Difference-in-Differences (QDiD) Results:\n"
@@ -93,7 +101,7 @@ def estimate(self):
 
     def plot(self):
         """
-        Plot the QDiD estimates with confidence intervals if available.
+        Plota as estimativas do QDiD com intervalos de confiança, se disponíveis.
         """
         import matplotlib.pyplot as plt
 
