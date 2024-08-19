@@ -3,7 +3,7 @@ from .qtet import QTETEstimator
 from .qdid import QDiDEstimator
 from .cic import CiCEstimator
 from .mdid import MDiDEstimator
-from .spatt import SpATT
+from .spatt import SpATT_Estimator as SpATT
 from .ddid2 import DDID2Estimator 
 from .helper_functions import compute_ci_qte, compute_panel_qtet, compute_diff_se, plot_qte
 
