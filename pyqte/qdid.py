@@ -1,97 +1,115 @@
-import numpy as np
 import pandas as pd
-from scipy.stats import norm
-from statsmodels.regression.quantile_regression import QuantReg
+import numpy as np
+import rpy2.robjects as ro
+from rpy2.robjects import pandas2ri
+from rpy2.robjects.packages import importr
+from rpy2.robjects import Formula
+
+# Activate the automatic conversion of pandas DataFrames to R data.frames
+pandas2ri.activate()
+
+# Import the qte package from R
+qte = importr('qte')
 
 class QDiDEstimator:
     """
-    QDiDEstimator is used to estimate Quantile Treatment Effects using a Quantile Difference-in-Differences approach.
+    QDiDEstimator is used to estimate Quantile Difference-in-Differences (QDiD)
+    effects using the R 'qte' package via rpy2.
     
     Attributes:
     -----------
+    formula : str
+        The formula representing the relationship between the dependent and independent variables.
     data : pandas.DataFrame
-        The dataset containing the outcome variable, treatment indicator, time indicator, and covariates.
-    outcome : str
-        The name of the outcome variable.
-    treatment : str
-        The name of the treatment indicator variable.
-    time : str
-        The name of the time indicator variable.
-    covariates : list of str
-        The list of covariates to control for in the estimation.
-    quantiles : list of float
+        The dataset containing the variables used in the formula.
+    t : int
+        The time period after treatment.
+    tmin1 : int
+        The time period before treatment.
+    idname : str
+        The name of the column representing the unique identifier for each unit.
+    tname : str
+        The name of the column representing the time periods.
+    probs : list
         The list of quantiles at which to estimate the treatment effect.
-    panel : bool
-        Whether the data is panel data (True) or repeated cross-section (False).
+    se : bool
+        Whether to compute standard errors.
+    iters : int
+        The number of bootstrap iterations to compute standard errors.
     """
     
-    def __init__(self, data, outcome, treatment, time, covariates, quantiles, panel=True):
+    def __init__(self, formula, data, t, tmin1, idname, tname, probs=[0.05, 0.5, 0.95], se=True, iters=100):
+        self.formula = formula
         self.data = data
-        self.outcome = outcome
-        self.treatment = treatment
-        self.time = time
-        self.covariates = covariates
-        self.quantiles = quantiles
-        self.panel = panel
-        
+        self.t = t
+        self.tmin1 = tmin1
+        self.idname = idname
+        self.tname = tname
+        self.probs = probs
+        self.se = se
+        self.iters = iters
+
     def estimate(self):
         """
-        Estimate the Quantile Treatment Effects using QDiD for the specified quantiles.
+        Estimate the QDiD effects.
+
+        Returns:
+        --------
+        results : dict
+            A dictionary containing the estimated QDiD effects and, if requested, the standard errors.
+        """
+        # Convert the pandas DataFrame to an R data.frame
+        r_data = pandas2ri.py2rpy(self.data)
+
+        # Prepare the formula for R
+        r_formula = Formula(self.formula)
+
+        # Call the qdid function from the R 'qte' package
+        qdid_result = qte.qdid(r_formula, data=r_data, t=self.t, tmin1=self.tmin1,
+                               idname=self.idname, tname=self.tname, probs=ro.FloatVector(self.probs),
+                               se=self.se, iters=self.iters)
+
+        # Extract the results into a dictionary
+        results = {
+            'qdid': np.array(qdid_result.rx2('QTE')),
+            'probs': self.probs
+        }
+
+        if self.se:
+            results['se'] = np.array(qdid_result.rx2('Std.Error'))
+
+        return results
+
+    def summary(self):
+        """
+        Provide a summary of the QDiD estimation results.
         
         Returns:
         --------
-        qdid_results : pandas.DataFrame
-            A DataFrame containing the estimated Quantile Treatment Effects and their standard errors.
+        summary : str
+            A textual summary of the QDiD results.
         """
-        qdid_results = []
+        results = self.estimate()
+        summary_str = "Quantile Difference-in-Differences (QDiD) Results:\n"
+        summary_str += "Quantiles: " + str(self.probs) + "\n"
+        summary_str += "QDiD Estimates: " + str(results['qdid']) + "\n"
         
-        for quantile in self.quantiles:
-            pre_treated_data = self.data[(self.data[self.treatment] == 1) & (self.data[self.time] == 0)]
-            post_treated_data = self.data[(self.data[self.treatment] == 1) & (self.data[self.time] == 1)]
-            pre_control_data = self.data[(self.data[self.treatment] == 0) & (self.data[self.time] == 0)]
-            post_control_data = self.data[(self.data[self.treatment] == 0) & (self.data[self.time] == 1)]
-            
-            model_pre_treated = QuantReg(pre_treated_data[self.outcome], pre_treated_data[self.covariates])
-            result_pre_treated = model_pre_treated.fit(q=quantile)
-            
-            model_post_treated = QuantReg(post_treated_data[self.outcome], post_treated_data[self.covariates])
-            result_post_treated = model_post_treated.fit(q=quantile)
-            
-            model_pre_control = QuantReg(pre_control_data[self.outcome], pre_control_data[self.covariates])
-            result_pre_control = model_pre_control.fit(q=quantile)
-            
-            model_post_control = QuantReg(post_control_data[self.outcome], post_control_data[self.covariates])
-            result_post_control = model_post_control.fit(q=quantile)
-            
-            qtete_pre = result_pre_treated.params - result_pre_control.params
-            qtete_post = result_post_treated.params - result_post_control.params
-            
-            qtete_diff = qtete_post - qtete_pre
-            se_pre = np.sqrt(result_pre_treated.bse**2 + result_pre_control.bse**2)
-            se_post = np.sqrt(result_post_treated.bse**2 + result_post_control.bse**2)
-            se_diff = np.sqrt(se_pre**2 + se_post**2)
-            
-            qdid_results.append({
-                "Quantile": quantile,
-                "QDiD Estimate": qtete_diff[self.covariates[0]],  # Focusing on the first covariate for simplicity
-                "Std. Error": se_diff[self.covariates[0]]
-            })
+        if self.se:
+            summary_str += "Standard Errors: " + str(results['se']) + "\n"
         
-        return pd.DataFrame(qdid_results)
+        return summary_str
 
-    def plot_qdid(self, qdid_results):
+    def plot(self):
         """
-        Plot the estimated QDiD Quantile Treatment Effects.
-        
-        Parameters:
-        -----------
-        qdid_results : pandas.DataFrame
-            The DataFrame containing the estimated QDiD QTETs to be plotted.
+        Plot the QDiD estimates with confidence intervals if available.
         """
         import matplotlib.pyplot as plt
+
+        results = self.estimate()
         
-        plt.errorbar(qdid_results["Quantile"], qdid_results["QDiD Estimate"], yerr=qdid_results["Std. Error"], fmt='o')
-        plt.xlabel("Quantile")
-        plt.ylabel("QDiD Estimate")
-        plt.title("Quantile Treatment Effects using QDiD")
+        plt.errorbar(self.probs, results['qdid'], yerr=results.get('se', None), fmt='o', capsize=5)
+        plt.xlabel('Quantiles')
+        plt.ylabel('QDiD Estimates')
+        plt.title('Quantile Difference-in-Differences (QDiD) Estimates')
+        plt.grid(True)
         plt.show()
