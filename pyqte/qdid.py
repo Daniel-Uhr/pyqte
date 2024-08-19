@@ -49,15 +49,7 @@ class QDiDEstimator:
         self.se = se
         self.iters = iters
 
-    def estimate(self):
-        """
-        Estimate the QDiD effects.
-
-        Returns:
-        --------
-        results : dict
-            A dictionary containing the estimated QDiD effects and, if requested, the standard errors.
-        """
+def estimate(self):
         # Convert the pandas DataFrame to an R data.frame
         r_data = pandas2ri.py2rpy(self.data)
 
@@ -65,7 +57,7 @@ class QDiDEstimator:
         r_formula = Formula(self.formula)
 
         # Call the qdid function from the R 'qte' package
-        qdid_result = QDiD(r_formula, data=r_data, t=self.t, tmin1=self.tmin1,
+        qdid_result = qte.QDiD(r_formula, data=r_data, t=self.t, tmin1=self.tmin1,
                                idname=self.idname, tname=self.tname, probs=ro.FloatVector(self.probs),
                                se=self.se, iters=self.iters)
 
