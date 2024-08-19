@@ -1,115 +1,159 @@
-import numpy as np
 import pandas as pd
-from scipy import stats
+import numpy as np
+from rpy2.robjects import pandas2ri, Formula
+from rpy2.robjects.packages import importr
 
-def calculate_quantiles(data, probs):
+# Activate the pandas conversion for rpy2
+pandas2ri.activate()
+
+# Import the necessary R packages
+base = importr('base')
+stats = importr('stats')
+
+def prepare_r_data(dataframe):
     """
-    Calculate quantiles for the given data and specified probabilities.
+    Convert a pandas DataFrame to an R dataframe.
     
     Parameters:
     -----------
-    data : array-like
-        The data for which quantiles need to be calculated.
-    probs : list or array-like
-        A list or array of probabilities at which to calculate quantiles.
+    dataframe : pandas.DataFrame
+        The DataFrame to be converted.
     
     Returns:
     --------
-    quantiles : numpy.ndarray
-        The calculated quantiles corresponding to the specified probabilities.
+    r_dataframe : R dataframe
+        The converted R dataframe.
     """
-    quantiles = np.quantile(data, probs)
-    return quantiles
+    return pandas2ri.py2rpy(dataframe)
 
-def bootstrap(data, func, iters=1000):
+def create_formula(dependent_var, independent_vars):
     """
-    Perform bootstrap resampling on the data to estimate the sampling distribution of a statistic.
+    Create an R formula from dependent and independent variables.
     
     Parameters:
     -----------
-    data : array-like
-        The data to bootstrap.
-    func : function
-        The statistic function to apply to the bootstrap samples.
-    iters : int, optional
-        The number of bootstrap iterations. Default is 1000.
+    dependent_var : str
+        The name of the dependent variable.
+    independent_vars : list of str
+        The list of independent variables.
     
     Returns:
     --------
-    bootstrap_estimates : numpy.ndarray
-        An array of the bootstrap estimates for each iteration.
+    formula : rpy2.robjects.Formula
+        The created R formula.
     """
-    n = len(data)
-    bootstrap_estimates = np.zeros(iters)
-    
-    for i in range(iters):
-        sample = np.random.choice(data, size=n, replace=True)
-        bootstrap_estimates[i] = func(sample)
-    
-    return bootstrap_estimates
+    formula_str = f"{dependent_var} ~ {' + '.join(independent_vars)}"
+    return Formula(formula_str)
 
-def calculate_confidence_interval(estimates, alpha=0.05):
+def calculate_summary_statistics(dataframe):
     """
-    Calculate a confidence interval for the bootstrap estimates.
+    Calculate summary statistics for a pandas DataFrame.
     
     Parameters:
     -----------
-    estimates : array-like
-        The bootstrap estimates.
-    alpha : float, optional
-        The significance level for the confidence interval. Default is 0.05.
+    dataframe : pandas.DataFrame
+        The DataFrame for which to calculate summary statistics.
     
     Returns:
     --------
-    ci_lower : float
-        The lower bound of the confidence interval.
-    ci_upper : float
-        The upper bound of the confidence interval.
+    summary : pandas.DataFrame
+        A DataFrame containing the summary statistics.
     """
-    lower_bound = np.percentile(estimates, 100 * (alpha / 2))
-    upper_bound = np.percentile(estimates, 100 * (1 - alpha / 2))
-    return lower_bound, upper_bound
+    summary = dataframe.describe()
+    return summary
 
-def weighted_quantile(values, quantiles, sample_weight=None, values_sorted=False, old_style=False):
+def bootstrap_sample(dataframe, n=1000):
     """
-    Compute the weighted quantile of a given data set.
+    Generate bootstrap samples from a pandas DataFrame.
     
     Parameters:
     -----------
-    values : array-like
-        The data values.
-    quantiles : array-like
-        The quantiles to compute (should all be in the range [0, 1]).
-    sample_weight : array-like, optional
-        The weights of the data values. If None, equal weights are assumed.
-    values_sorted : bool, optional
-        If True, the values array is assumed to be sorted.
-    old_style : bool, optional
-        If True, use the "1-liner" method for computing quantiles, which is slightly less accurate.
+    dataframe : pandas.DataFrame
+        The DataFrame to bootstrap.
+    n : int, optional (default=1000)
+        The number of bootstrap samples to generate.
     
     Returns:
     --------
-    quantiles : numpy.ndarray
-        The computed quantiles.
+    samples : list of pandas.DataFrame
+        A list containing the bootstrap samples.
     """
-    values = np.array(values)
-    quantiles = np.array(quantiles)
+    samples = [dataframe.sample(frac=1, replace=True) for _ in range(n)]
+    return samples
+
+def calculate_confidence_intervals(data, alpha=0.05):
+    """
+    Calculate confidence intervals for the mean of a pandas DataFrame.
     
-    if sample_weight is None:
-        sample_weight = np.ones(len(values))
-    sample_weight = np.array(sample_weight)
+    Parameters:
+    -----------
+    data : pandas.DataFrame
+        The data for which to calculate confidence intervals.
+    alpha : float, optional (default=0.05)
+        The significance level for the confidence interval.
     
-    assert np.all(quantiles >= 0) and np.all(quantiles <= 1), "Quantiles should be in the range [0, 1]"
+    Returns:
+    --------
+    intervals : pandas.DataFrame
+        A DataFrame containing the lower and upper bounds of the confidence intervals.
+    """
+    mean = data.mean()
+    std_err = data.sem()
+    margin_of_error = std_err * stats.qnorm(1 - alpha / 2)
     
-    if not values_sorted:
-        sorter = np.argsort(values)
-        values = values[sorter]
-        sample_weight = sample_weight[sorter]
+    lower_bound = mean - margin_of_error
+    upper_bound = mean + margin_of_error
     
-    weighted_quantiles = np.cumsum(sample_weight) - 0.5 * sample_weight
-    weighted_quantiles /= np.sum(sample_weight)
+    intervals = pd.DataFrame({
+        'Lower Bound': lower_bound,
+        'Upper Bound': upper_bound
+    })
     
-    if old_style:
-        return np.interp(quantiles, weighted_quantiles, values)
-    else:
-        return np.interp(quantiles, weighted_quantiles, values, left=values[0], right=values[-1])
+    return intervals
+
+def merge_dataframes(df1, df2, on):
+    """
+    Merge two pandas DataFrames on a common key.
+    
+    Parameters:
+    -----------
+    df1 : pandas.DataFrame
+        The first DataFrame.
+    df2 : pandas.DataFrame
+        The second DataFrame.
+    on : str
+        The key column to merge on.
+    
+    Returns:
+    --------
+    merged_df : pandas.DataFrame
+        The merged DataFrame.
+    """
+    merged_df = pd.merge(df1, df2, on=on)
+    return merged_df
+
+def generate_quantile_regression_results(model, quantiles):
+    """
+    Generate results from a quantile regression model.
+    
+    Parameters:
+    -----------
+    model : statsmodels.regression.quantile_regression.QuantReg
+        The fitted quantile regression model.
+    quantiles : list of float
+        The list of quantiles to estimate.
+    
+    Returns:
+    --------
+    results : dict
+        A dictionary containing the quantile estimates and confidence intervals.
+    """
+    results = {}
+    for q in quantiles:
+        res = model.fit(q=q)
+        results[q] = {
+            'coefficients': res.params,
+            'confidence_intervals': res.conf_int()
+        }
+    return results
+
