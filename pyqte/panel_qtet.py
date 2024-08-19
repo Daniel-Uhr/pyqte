@@ -61,7 +61,7 @@ class PanelQTET_Estimator:
         result : R object
             The result of the Panel QTET estimation, which can be further processed or summarized.
         """
-        result = qte.panel_qtet(self.formula, t=self.t, tmin1=self.tmin1, tmin2=self.tmin2,
+        result = panel_qtet(self.formula, t=self.t, tmin1=self.tmin1, tmin2=self.tmin2,
                                 idname=self.idname, tname=self.tname, data=self.data,
                                 probs=self.probs, se=self.se, iters=self.iters, method=self.method)
         return result
