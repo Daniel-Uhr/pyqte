@@ -1,4 +1,8 @@
 import pandas as pd
+from rpy2.robjects import pandas2ri, Formula
+
+# Activate the pandas conversion for rpy2
+pandas2ri.activate()
 
 def load_lalonde_data():
     """
@@ -98,4 +102,39 @@ def get_summary_statistics(data):
         A DataFrame containing summary statistics (mean, std, min, max).
     """
     return data.describe()
+
+def prepare_r_data(dataframe):
+    """
+    Convert a pandas DataFrame to an R dataframe.
+    
+    Parameters:
+    -----------
+    dataframe : pandas.DataFrame
+        The DataFrame to be converted.
+    
+    Returns:
+    --------
+    r_dataframe : R dataframe
+        The converted R dataframe.
+    """
+    return pandas2ri.py2rpy(dataframe)
+
+def create_formula(dependent_var, independent_vars):
+    """
+    Create an R formula from dependent and independent variables.
+    
+    Parameters:
+    -----------
+    dependent_var : str
+        The name of the dependent variable.
+    independent_vars : list of str
+        The list of independent variables.
+    
+    Returns:
+    --------
+    formula : rpy2.robjects.Formula
+        The created R formula.
+    """
+    formula_str = f"{dependent_var} ~ {' + '.join(independent_vars)}"
+    return Formula(formula_str)
 
