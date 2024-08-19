@@ -65,7 +65,7 @@ class QDiDEstimator:
         r_formula = Formula(self.formula)
 
         # Call the qdid function from the R 'qte' package
-        qdid_result = qte.qdid(r_formula, data=r_data, t=self.t, tmin1=self.tmin1,
+        qdid_result = QDiD(r_formula, data=r_data, t=self.t, tmin1=self.tmin1,
                                idname=self.idname, tname=self.tname, probs=ro.FloatVector(self.probs),
                                se=self.se, iters=self.iters)
 
