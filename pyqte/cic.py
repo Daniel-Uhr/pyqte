@@ -1,92 +1,115 @@
-import numpy as np
 import pandas as pd
-from scipy.stats import norm
-from statsmodels.regression.quantile_regression import QuantReg
+import numpy as np
+import rpy2.robjects as ro
+from rpy2.robjects import pandas2ri
+from rpy2.robjects.packages import importr
+from rpy2.robjects import Formula
+
+# Activate the automatic conversion of pandas DataFrames to R data.frames
+pandas2ri.activate()
+
+# Import the qte package from R
+qte = importr('qte')
 
 class CiCEstimator:
     """
-    CiCEstimator is used to estimate Quantile Treatment Effects using the Change in Changes (CiC) method.
+    CiCEstimator is used to estimate Changes-in-Changes (CiC) effects using the R 'qte' package via rpy2.
     
     Attributes:
     -----------
+    formula : str
+        The formula representing the relationship between the dependent and independent variables.
     data : pandas.DataFrame
-        The dataset containing the outcome variable, treatment indicator, time indicator, and covariates.
-    outcome : str
-        The name of the outcome variable.
-    treatment : str
-        The name of the treatment indicator variable.
-    time : str
-        The name of the time indicator variable.
-    covariates : list of str
-        The list of covariates to control for in the estimation.
-    quantiles : list of float
+        The dataset containing the variables used in the formula.
+    t : int
+        The time period after treatment.
+    tmin1 : int
+        The time period before treatment.
+    idname : str
+        The name of the column representing the unique identifier for each unit.
+    tname : str
+        The name of the column representing the time periods.
+    probs : list
         The list of quantiles at which to estimate the treatment effect.
-    panel : bool
-        Whether the data is panel data (True) or repeated cross-section (False).
+    se : bool
+        Whether to compute standard errors.
+    iters : int
+        The number of bootstrap iterations to compute standard errors.
     """
     
-    def __init__(self, data, outcome, treatment, time, covariates, quantiles, panel=True):
+    def __init__(self, formula, data, t, tmin1, idname, tname, probs=[0.05, 0.5, 0.95], se=True, iters=100):
+        self.formula = formula
         self.data = data
-        self.outcome = outcome
-        self.treatment = treatment
-        self.time = time
-        self.covariates = covariates
-        self.quantiles = quantiles
-        self.panel = panel
-        
+        self.t = t
+        self.tmin1 = tmin1
+        self.idname = idname
+        self.tname = tname
+        self.probs = probs
+        self.se = se
+        self.iters = iters
+
     def estimate(self):
         """
-        Estimate the Quantile Treatment Effects using CiC for the specified quantiles.
+        Estimate the CiC effects.
+
+        Returns:
+        --------
+        results : dict
+            A dictionary containing the estimated CiC effects and, if requested, the standard errors.
+        """
+        # Convert the pandas DataFrame to an R data.frame
+        r_data = pandas2ri.py2rpy(self.data)
+
+        # Prepare the formula for R
+        r_formula = Formula(self.formula)
+
+        # Call the CiC function from the R 'qte' package
+        cic_result = qte.CiC(r_formula, data=r_data, t=self.t, tmin1=self.tmin1,
+                             idname=self.idname, tname=self.tname, probs=ro.FloatVector(self.probs),
+                             se=self.se, iters=self.iters)
+
+        # Extract the results into a dictionary
+        results = {
+            'cic': np.array(cic_result.rx2('QTE')),
+            'probs': self.probs
+        }
+
+        if self.se:
+            results['se'] = np.array(cic_result.rx2('Std.Error'))
+
+        return results
+
+    def summary(self):
+        """
+        Provide a summary of the CiC estimation results.
         
         Returns:
         --------
-        cic_results : pandas.DataFrame
-            A DataFrame containing the estimated Quantile Treatment Effects and their standard errors.
+        summary : str
+            A textual summary of the CiC results.
         """
-        cic_results = []
+        results = self.estimate()
+        summary_str = "Changes-in-Changes (CiC) Results:\n"
+        summary_str += "Quantiles: " + str(self.probs) + "\n"
+        summary_str += "CiC Estimates: " + str(results['cic']) + "\n"
         
-        for quantile in self.quantiles:
-            pre_treated_data = self.data[(self.data[self.treatment] == 1) & (self.data[self.time] == 0)]
-            post_treated_data = self.data[(self.data[self.treatment] == 1) & (self.data[self.time] == 1)]
-            pre_control_data = self.data[(self.data[self.treatment] == 0) & (self.data[self.time] == 0)]
-            post_control_data = self.data[(self.data[self.treatment] == 0) & (self.data[self.time] == 1)]
-            
-            model_pre_control = QuantReg(pre_control_data[self.outcome], pre_control_data[self.covariates])
-            result_pre_control = model_pre_control.fit(q=quantile)
-            
-            model_post_control = QuantReg(post_control_data[self.outcome], post_control_data[self.covariates])
-            result_post_control = model_post_control.fit(q=quantile)
-            
-            model_pre_treated = QuantReg(pre_treated_data[self.outcome], pre_treated_data[self.covariates])
-            result_pre_treated = model_pre_treated.fit(q=quantile)
-            
-            # Calculate the Change in Changes for the treated group
-            cic = result_pre_treated.predict(self.data[self.covariates]) + (result_post_control.predict(self.data[self.covariates]) - result_pre_control.predict(self.data[self.covariates]))
-            
-            qtete_diff = result_post_control.params - cic
-            
-            cic_results.append({
-                "Quantile": quantile,
-                "CiC Estimate": qtete_diff[self.covariates[0]],  # Focusing on the first covariate for simplicity
-                "Std. Error": np.sqrt(result_post_control.bse[self.covariates[0]]**2 + result_pre_control.bse[self.covariates[0]]**2)
-            })
+        if self.se:
+            summary_str += "Standard Errors: " + str(results['se']) + "\n"
         
-        return pd.DataFrame(cic_results)
+        return summary_str
 
-    def plot_cic(self, cic_results):
+    def plot(self):
         """
-        Plot the estimated CiC Quantile Treatment Effects.
-        
-        Parameters:
-        -----------
-        cic_results : pandas.DataFrame
-            The DataFrame containing the estimated CiC QTETs to be plotted.
+        Plot the CiC estimates with confidence intervals if available.
         """
         import matplotlib.pyplot as plt
+
+        results = self.estimate()
         
-        plt.errorbar(cic_results["Quantile"], cic_results["CiC Estimate"], yerr=cic_results["Std. Error"], fmt='o')
-        plt.xlabel("Quantile")
-        plt.ylabel("CiC Estimate")
-        plt.title("Quantile Treatment Effects using Change in Changes (CiC)")
+        plt.errorbar(self.probs, results['cic'], yerr=results.get('se', None), fmt='o', capsize=5)
+        plt.xlabel('Quantiles')
+        plt.ylabel('CiC Estimates')
+        plt.title('Changes-in-Changes (CiC) Estimates')
+        plt.grid(True)
         plt.show()
 
