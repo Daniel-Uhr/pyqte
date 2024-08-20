@@ -43,23 +43,27 @@ class PanelQTETEstimator:
         if self.formula is None or self.data is None or self.t is None or self.tmin1 is None or self.tmin2 is None or self.idname is None or self.tname is None:
             raise ValueError("Todos os parâmetros obrigatórios devem ser fornecidos e não devem ser None.")
         
-        self.result = qte.panel_qtet(
-            formla=self.formula,
-            t=self.t,
-            tmin1=self.tmin1,
-            tmin2=self.tmin2,
-            idname=self.idname,
-            tname=self.tname,
-            data=self.data,
-            probs=self.probs,
-            se=self.se,
-            iters=self.iters,
-            method=self.method,
-            alp=self.alp,
-            retEachIter=self.retEachIter,
-            pl=self.pl,
-            cores=self.cores
-        )
+        # Verifique se cores é None e, se for, remova-o dos argumentos
+        args = {
+            "formla": self.formula,
+            "t": self.t,
+            "tmin1": self.tmin1,
+            "tmin2": self.tmin2,
+            "idname": self.idname,
+            "tname": self.tname,
+            "data": self.data,
+            "probs": self.probs,
+            "se": self.se,
+            "iters": self.iters,
+            "method": self.method,
+            "alp": self.alp,
+            "retEachIter": self.retEachIter,
+            "pl": self.pl,
+        }
+        if self.cores is not None:
+            args["cores"] = self.cores
+
+        self.result = qte.panel_qtet(**args)
         return self.result
 
     def summary(self):
@@ -106,3 +110,4 @@ class PanelQTETEstimator:
             'QTET Upper Bound': np.array(self.result.rx2('qte.upper')) if 'qte.upper' in self.result.names else None,
         }
         return pd.DataFrame(data)
+
