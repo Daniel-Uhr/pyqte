@@ -4,6 +4,7 @@ import rpy2.robjects as ro
 from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 from rpy2.robjects import Formula
+from rpy2.robjects.conversion import localconverter
 import matplotlib.pyplot as plt
 
 # Ativar a conversão automática de pandas DataFrames para R data.frames
@@ -37,7 +38,7 @@ class CiCEstimator:
         self.retEachIter = retEachIter
 
     def fit(self):
-        with pandas2ri.localconverter(ro.default_converter + pandas2ri.converter):
+        with localconverter(ro.default_converter + pandas2ri.converter):
             r_data = ro.conversion.py2rpy(self.data)
 
         r_formula = Formula(self.formula)
@@ -98,3 +99,4 @@ class CiCEstimator:
         plt.legend()
         plt.grid(True)
         plt.show()
+
