@@ -4,6 +4,7 @@ import rpy2.robjects as ro
 from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 from rpy2.robjects import Formula
+import matplotlib.pyplot as plt
 
 # Ativando a conversão automática de pandas DataFrames para R data.frames
 pandas2ri.activate()
@@ -40,3 +41,24 @@ class QDiDEstimator:
         summary = r.summary(qdid_result)
         print(summary)
 
+   def plot(self):
+        """
+        Plota as estimativas do QDiD com intervalos de confiança, se disponíveis.
+        """
+        results = self.estimate()
+
+        # Extrair os quantis, QTEs e erros padrão
+        quantiles = np.array(self.probs)
+        qte_estimates = np.array(results.rx2('QTE'))
+        std_errors = np.array(results.rx2('Std.Error'))
+
+        # Criar o gráfico
+        plt.figure(figsize=(10, 6))
+        plt.errorbar(quantiles, qte_estimates, yerr=std_errors, fmt='o', capsize=5, label="QTE with Std. Error")
+        plt.axhline(y=0, color='r', linestyle='--', label="No Effect Line")
+        plt.xlabel('Quantiles')
+        plt.ylabel('Quantile Treatment Effect (QTE)')
+        plt.title('Quantile Difference-in-Differences (QDiD) Estimates')
+        plt.grid(True)
+        plt.legend()
+        plt.show()
