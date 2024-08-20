@@ -71,6 +71,9 @@ class DDID2Estimator:
         if self.seedvec is not None:
             additional_args['seedvec'] = self.seedvec
 
+        # Remover chaves que estão com valores None para evitar o erro
+        additional_args = {k: v for k, v in additional_args.items() if v is not None}
+
         self.result = qte.ddid2(
             formla=r_formula,
             data=r_data,
@@ -137,3 +140,4 @@ class DDID2Estimator:
         })
 
         return results_df
+
