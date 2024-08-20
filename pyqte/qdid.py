@@ -61,7 +61,6 @@ class QDiDEstimator:
         """
         qdid_result = self.estimate()
         summary = r.summary(qdid_result)
-        print(summary)
         return summary
 
     def plot(self):
@@ -74,6 +73,9 @@ class QDiDEstimator:
         tau = list(summary.rx2('tau'))
         qte = list(summary.rx2('QTE'))
         std_error = list(summary.rx2('Std. Error'))
+
+        # Substituir valores nulos (NULLType) por 0
+        std_error = [0 if v is None else v for v in std_error]
 
         # Construindo o intervalo de confiança
         lower_bound = np.array(qte) - 1.96 * np.array(std_error)
