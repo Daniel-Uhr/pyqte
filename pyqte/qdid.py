@@ -64,37 +64,37 @@ class QDiDEstimator:
         print(summary)
         return summary
 
-  def plot(self):
-    """
-    Plota as estimativas do QDiD com intervalos de confiança, se disponíveis.
-    """
-    import matplotlib.pyplot as plt
-    
-    # Estimando os resultados
-    results = self.estimate()
-    
-    quantiles = results['probs']
-    qte_estimates = results['qdid']
-    std_errors = results.get('se', None)
-    
-    # Verificando os tamanhos das listas
-    print("Tamanhos das listas:")
-    print(f"Tamanho de quantiles: {len(quantiles)}")
-    print(f"Tamanho de qte_estimates: {len(qte_estimates)}")
-    if std_errors is not None:
-        print(f"Tamanho de std_errors: {len(std_errors)}")
-    
-    # Criar o gráfico
-    plt.figure(figsize=(10, 6))
-    if std_errors is not None:
-        plt.errorbar(quantiles, qte_estimates, yerr=std_errors, fmt='o', capsize=5, label="QTE with Std. Error")
-    else:
-        plt.plot(quantiles, qte_estimates, 'o-', label="QTE")
-    
-    plt.axhline(y=0, color='r', linestyle='--', label="No Effect Line")
-    plt.xlabel('Quantiles')
-    plt.ylabel('QTE Estimates')
-    plt.title('Quantile Treatment Effects (QDiD)')
-    plt.legend()
-    plt.grid(True)
-    plt.show()
+    def plot(self):
+        """
+        Plota as estimativas do QDiD com intervalos de confiança, se disponíveis.
+        """
+        import matplotlib.pyplot as plt
+        
+        # Estimando os resultados
+        results = self.estimate()
+        
+        quantiles = results['probs']
+        qte_estimates = results['qdid']
+        std_errors = results.get('se', None)
+        
+        # Verificando os tamanhos das listas
+        print("Tamanhos das listas:")
+        print(f"Tamanho de quantiles: {len(quantiles)}")
+        print(f"Tamanho de qte_estimates: {len(qte_estimates)}")
+        if std_errors is not None:
+            print(f"Tamanho de std_errors: {len(std_errors)}")
+        
+        # Criar o gráfico
+        plt.figure(figsize=(10, 6))
+        if std_errors is not None:
+            plt.errorbar(quantiles, qte_estimates, yerr=std_errors, fmt='o', capsize=5, label="QTE with Std. Error")
+        else:
+            plt.plot(quantiles, qte_estimates, 'o-', label="QTE")
+        
+        plt.axhline(y=0, color='r', linestyle='--', label="No Effect Line")
+        plt.xlabel('Quantiles')
+        plt.ylabel('QTE Estimates')
+        plt.title('Quantile Treatment Effects (QDiD)')
+        plt.legend()
+        plt.grid(True)
+        plt.show()
