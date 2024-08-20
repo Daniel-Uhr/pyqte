@@ -3,7 +3,7 @@ import numpy as np
 import rpy2.robjects as ro
 from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
-from rpy2.robjects import Formula  # Importando Formula
+from rpy2.robjects import Formula
 from rpy2.robjects.conversion import localconverter
 import matplotlib.pyplot as plt
 
@@ -76,25 +76,43 @@ class CiCEstimator:
         return summary
 
     def plot(self):
-        tau = np.array(self.probs)
+        # Verificar e imprimir os valores de 'probs'
+        tau = self.probs
+        print(f"tau (probs): {tau}, type: {type(tau)}, length: {len(tau)}")
+
+        # Extrair e verificar os valores de 'QTE'
         cic = np.array(self.result.rx2('QTE'))
+        print(f"cic (QTE): {cic}, type: {type(cic)}, shape: {cic.shape}")
 
         # Garantir que 'tau' e 'cic' tenham a mesma dimensão
         if len(cic.shape) > 1:
             cic = cic.flatten()
 
+        # Verificar e ajustar as dimensões de 'tau' e 'cic'
         if len(tau) != len(cic):
+            print(f"Dimension mismatch detected: len(tau)={len(tau)}, len(cic)={len(cic)}")
             tau = np.linspace(tau[0], tau[-1], len(cic))
+            print(f"Adjusted tau: {tau}, length: {len(tau)}")
 
-        # Verificar se se=True para plotar com intervalos de confiança
+        # Se se=True, verificar e imprimir os intervalos de confiança
         if self.se:
             lower_bound = np.array(self.result.rx2('QTE.lower')).flatten()
             upper_bound = np.array(self.result.rx2('QTE.upper')).flatten()
+            print(f"lower_bound: {lower_bound}, shape: {lower_bound.shape}")
+            print(f"upper_bound: {upper_bound}, shape: {upper_bound.shape}")
 
-            plt.figure(figsize=(10, 6))
-            plt.plot(tau, cic, 'o-', label="CiC")
-            plt.fill_between(tau, lower_bound, upper_bound, color='gray', alpha=0.2, label="95% CI")
+            # Verificar se lower_bound e upper_bound têm a mesma dimensão de tau e cic
+            if len(lower_bound) == len(tau) and len(upper_bound) == len(tau):
+                print("Plotting with confidence intervals...")
+                plt.figure(figsize=(10, 6))
+                plt.plot(tau, cic, 'o-', label="CiC")
+                plt.fill_between(tau, lower_bound, upper_bound, color='gray', alpha=0.2, label="95% CI")
+            else:
+                print("Dimensões de lower_bound ou upper_bound não correspondem a tau. Plotagem do intervalo de confiança omitida.")
+                plt.figure(figsize=(10, 6))
+                plt.plot(tau, cic, 'o-', label="CiC")
         else:
+            print("Plotting without confidence intervals...")
             plt.figure(figsize=(10, 6))
             plt.plot(tau, cic, 'o-', label="CiC")
         
@@ -105,3 +123,4 @@ class CiCEstimator:
         plt.legend()
         plt.grid(True)
         plt.show()
+
