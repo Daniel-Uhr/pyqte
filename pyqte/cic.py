@@ -1,4 +1,3 @@
-from pyqte.cic import CiCEstimator
 import pandas as pd
 import numpy as np
 import rpy2.robjects as ro
