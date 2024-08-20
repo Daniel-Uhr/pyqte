@@ -70,16 +70,20 @@ class QDiDEstimator:
         summary = self.summary()
 
         # Extraindo os dados do summary
-        tau = list(summary.rx2('tau'))
-        qte = list(summary.rx2('QTE'))
-        std_error = list(summary.rx2('Std. Error'))
+        try:
+            tau = list(summary.rx2('tau'))
+            qte = list(summary.rx2('QTE'))
+            std_error = list(summary.rx2('Std. Error'))
+        except TypeError:
+            # Caso ocorra um TypeError (como quando NULLType aparece), vamos assumir 0 para std_error
+            std_error = [0 if v is None else v for v in summary.rx2('Std. Error')]
 
         # Substituir valores nulos (NULLType) por 0
-        std_error = [0 if v is None else v for v in std_error]
+        std_error = np.array([0 if v is None else v for v in std_error])
 
         # Construindo o intervalo de confiança
-        lower_bound = np.array(qte) - 1.96 * np.array(std_error)
-        upper_bound = np.array(qte) + 1.96 * np.array(std_error)
+        lower_bound = np.array(qte) - 1.96 * std_error
+        upper_bound = np.array(qte) + 1.96 * std_error
 
         # Criar o gráfico
         plt.figure(figsize=(10, 6))
