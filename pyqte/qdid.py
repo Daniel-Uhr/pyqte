@@ -46,14 +46,11 @@ class QDiDEstimator:
         """
         qte_results = self.estimate()
 
-        # Extraindo os dados do summary
-        tau = list(qte_results.rx2('qte').names)
-        qte = list(qte_results.rx2('qte'))
-        lower_bound = list(qte_results.rx2('qte.lower'))
-        upper_bound = list(qte_results.rx2('qte.upper'))
-
-        # Convertendo tau de string para float
-        tau = [float(t.replace('%', '')) / 100 for t in tau]
+        # Extraindo os dados do qte_results
+        tau = np.linspace(0.05, 0.95, len(qte_results.rx2('qte')))
+        qte = np.array(qte_results.rx2('qte'))
+        lower_bound = np.array(qte_results.rx2('qte.lower'))
+        upper_bound = np.array(qte_results.rx2('qte.upper'))
 
         # Criar o gráfico
         plt.figure(figsize=(10, 6))
