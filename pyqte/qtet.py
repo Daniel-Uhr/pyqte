@@ -14,10 +14,21 @@ qte = importr('qte')
 r = ro.r  # Acessando o ambiente R diretamente
 
 class QTETEstimator:
-    def __init__(self, formula, data, probs=None, se=True, iters=100, method='logit'):
-        self.formula = formula
+    def __init__(self, data, formula, t=None, tmin1=None, tmin2=None, idname=None, tname=None, probs=None, iters=100, se=True, method='logit'):
         self.data = pandas2ri.py2rpy(data)  # Convertendo o DataFrame pandas para um DataFrame R
-        self.probs = probs if probs else ro.FloatVector([0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95])
+        self.formula = formula
+        self.t = t
+        self.tmin1 = tmin1
+        self.tmin2 = tmin2
+        self.idname = idname
+        self.tname = tname
+        
+        # Se probs for uma lista de três elementos, interpretar como uma sequência
+        if isinstance(probs, list) and len(probs) == 3:
+            self.probs = r.seq(probs[0], probs[1], probs[2])
+        else:
+            self.probs = ro.FloatVector(probs)  # Caso contrário, usar como está
+
         self.se = se
         self.iters = iters
         self.method = method
@@ -38,7 +49,6 @@ class QTETEstimator:
         result = self.estimate()
         summary = r.summary(result)
         print(summary)
-        return result
 
     def plot(self, result=None):
         if result is None:
