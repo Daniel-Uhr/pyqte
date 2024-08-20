@@ -3,16 +3,15 @@ from rpy2.robjects.packages import importr
 from rpy2.robjects import pandas2ri
 import numpy as np
 import matplotlib.pyplot as plt
-import pandas as pd
 
-# Ativar a conversão de pandas DataFrame para R DataFrame
+# Ativar a conversão pandas para R DataFrame
 pandas2ri.activate()
 
 # Importar o pacote 'qte' do R
 qte = importr('qte')
 
 class PanelQTETEstimator:
-    def __init__(self, formula, data, t, tmin1, tmin2, idname, tname, probs=None, se=True, iters=100, method="pscore", alp=0.05, retEachIter=False, pl=False, cores=None):
+    def __init__(self, formula, data, t, tmin1, tmin2, idname, tname, probs=None, se=False, iters=100, method="pscore", xformla=None):
         self.formula = Formula(formula)
         self.data = pandas2ri.py2rpy(data)
         self.t = t
@@ -20,7 +19,8 @@ class PanelQTETEstimator:
         self.tmin2 = tmin2
         self.idname = idname
         self.tname = tname
-        
+        self.xformla = Formula(xformla) if xformla is not None else None
+
         # Processar 'probs' como um vetor numérico em R
         if probs is None:
             self.probs = r.seq(0.05, 0.95, by=0.05)
@@ -33,64 +33,47 @@ class PanelQTETEstimator:
         self.se = se
         self.iters = iters
         self.method = method
-        self.alp = alp
-        self.retEachIter = retEachIter
-        self.pl = pl
-        self.cores = cores
 
     def fit(self):
-        # Certificar-se de que todos os argumentos necessários estão definidos
-        if self.formula is None or self.data is None or self.t is None or self.tmin1 is None or self.tmin2 is None or self.idname is None or self.tname is None:
-            raise ValueError("Todos os parâmetros obrigatórios devem ser fornecidos e não devem ser None.")
-        
-        # Verifique se cores é None e, se for, remova-o dos argumentos
-        args = {
-            "formla": self.formula,
-            "t": self.t,
-            "tmin1": self.tmin1,
-            "tmin2": self.tmin2,
-            "idname": self.idname,
-            "tname": self.tname,
-            "data": self.data,
-            "probs": self.probs,
-            "se": self.se,
-            "iters": self.iters,
-            "method": self.method,
-            "alp": self.alp,
-            "retEachIter": self.retEachIter,
-            "pl": self.pl,
-        }
-        if self.cores is not None:
-            args["cores"] = self.cores
+        additional_args = {}
+        if self.xformla is not None:
+            additional_args['xformla'] = self.xformla
 
-        self.result = qte.panel_qtet(**args)
+        self.result = qte.panel_qtet(
+            formla=self.formula,
+            t=self.t,
+            tmin1=self.tmin1,
+            tmin2=self.tmin2,
+            idname=self.idname,
+            tname=self.tname,
+            data=self.data,
+            probs=self.probs,
+            se=self.se,
+            iters=self.iters,
+            method=self.method,
+            **additional_args
+        )
         return self.result
 
     def summary(self):
-        if not hasattr(self, 'result'):
-            raise ValueError("Model has not been fitted yet. Call `fit()` before calling `summary()`.")
         summary = r.summary(self.result)
         print(summary)
         return summary
-
-    def plot(self):
-        if not hasattr(self, 'result'):
-            raise ValueError("Model has not been fitted yet. Call `fit()` before calling `plot()`.")
         
-        tau = np.array(self.probs)
-        qte = np.array(self.result.rx2('qte'))
+    def plot(self):
+        """
+        Plota os resultados da estimativa QTET.
+        """
+        qte_results = self.result
+
+        tau = np.linspace(0.05, 0.95, len(qte_results.rx2('qte')))
+        qte = np.array(qte_results.rx2('qte'))
+        lower_bound = np.array(qte_results.rx2('qte.lower'))
+        upper_bound = np.array(qte_results.rx2('qte.upper'))
 
         plt.figure(figsize=(10, 6))
         plt.plot(tau, qte, 'o-', label="QTE")
-
-        if self.se:
-            if 'qte.lower' in self.result.names and 'qte.upper' in self.result.names:
-                lower_bound = np.array(self.result.rx2('qte.lower'))
-                upper_bound = np.array(self.result.rx2('qte.upper'))
-                plt.fill_between(tau, lower_bound, upper_bound, color='gray', alpha=0.2, label="95% CI")
-            else:
-                print("Intervalos de confiança não estão disponíveis. Plotando apenas os valores de QTE.")
-
+        plt.fill_between(tau, lower_bound, upper_bound, color='gray', alpha=0.2, label="95% CI")
         plt.axhline(y=0, color='r', linestyle='--', label="No Effect Line")
         plt.xlabel('Quantiles')
         plt.ylabel('QTE Estimates')
@@ -100,14 +83,13 @@ class PanelQTETEstimator:
         plt.show()
 
     def get_results(self):
-        if not hasattr(self, 'result'):
-            raise ValueError("Model has not been fitted yet. Call `fit()` before calling `get_results()`.")
-
-        data = {
-            'Quantile': np.array(self.probs),
-            'QTET': np.array(self.result.rx2('qte')),
-            'QTET Lower Bound': np.array(self.result.rx2('qte.lower')) if 'qte.lower' in self.result.names else None,
-            'QTET Upper Bound': np.array(self.result.rx2('qte.upper')) if 'qte.upper' in self.result.names else None,
-        }
-        return pd.DataFrame(data)
-
+        """
+        Retorna os resultados como um DataFrame do pandas.
+        """
+        results_df = pd.DataFrame({
+            'Quantile': np.linspace(0.05, 0.95, len(self.result.rx2('qte'))),
+            'QTE': np.array(self.result.rx2('qte')),
+            'QTE Lower Bound': np.array(self.result.rx2('qte.lower')),
+            'QTE Upper Bound': np.array(self.result.rx2('qte.upper'))
+        })
+        return results_df
