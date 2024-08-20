@@ -59,12 +59,30 @@ class QTEEstimator:
     def plot(self):
         tau = np.array(self.probs)
         qte = np.array(self.result.rx2('qte'))
-        lower_bound = np.array(self.result.rx2('qte.lower'))
-        upper_bound = np.array(self.result.rx2('qte.upper'))
 
-        plt.figure(figsize=(10, 6))
-        plt.plot(tau, qte, 'o-', label="QTE")
-        plt.fill_between(tau, lower_bound, upper_bound, color='gray', alpha=0.2, label="95% CI")
+        # Verificar se se=True para plotar com intervalos de confiança
+        if self.se:
+            # Verificar se os intervalos de confiança existem e são numéricos
+            if 'qte.lower' in self.result.names and 'qte.upper' in self.result.names:
+                lower_bound = np.array(self.result.rx2('qte.lower'))
+                upper_bound = np.array(self.result.rx2('qte.upper'))
+
+                # Verificar se os valores de lower_bound e upper_bound são válidos para plotagem
+                if np.issubdtype(lower_bound.dtype, np.number) and np.issubdtype(upper_bound.dtype, np.number):
+                    plt.figure(figsize=(10, 6))
+                    plt.plot(tau, qte, 'o-', label="QTE")
+                    plt.fill_between(tau, lower_bound, upper_bound, color='gray', alpha=0.2, label="95% CI")
+                else:
+                    print("Intervalos de confiança contêm valores não numéricos. Plotagem omitida.")
+            else:
+                print("Intervalos de confiança não estão disponíveis. Plotando apenas os valores de QTE.")
+                plt.figure(figsize=(10, 6))
+                plt.plot(tau, qte, 'o-', label="QTE")
+        else:
+            # Se se=False, plotar apenas os pontos sem intervalos de confiança
+            plt.figure(figsize=(10, 6))
+            plt.plot(tau, qte, 'o-', label="QTE")
+        
         plt.axhline(y=0, color='r', linestyle='--', label="No Effect Line")
         plt.xlabel('Quantiles')
         plt.ylabel('QTE Estimates')
@@ -72,4 +90,5 @@ class QTEEstimator:
         plt.legend()
         plt.grid(True)
         plt.show()
+
 
