@@ -35,6 +35,7 @@ class CiCEstimator:
         self.pl = pl
         self.cores = cores
         self.retEachIter = retEachIter
+        self.result = None  # Armazenar o resultado da estimação
 
     def fit(self):
         with localconverter(ro.default_converter + pandas2ri.converter):
@@ -69,43 +70,43 @@ class CiCEstimator:
             **additional_args
         )
 
+        # Criar a variável com as informações
+        self.info = {
+            'qte': np.array(self.result.rx2('qte')),
+            'ate': np.array(self.result.rx2('ate')),
+            'probs': np.array(self.result.rx2('probs')),
+            'qte.se': np.array(self.result.rx2('qte.se')) if self.se else None,
+            'qte.lower': np.array(self.result.rx2('qte.lower')) if self.se else None,
+            'qte.upper': np.array(self.result.rx2('qte.upper')) if self.se else None,
+        }
+
     def summary(self):
         summary = ro.r.summary(self.result)
         print(summary)
         return summary
 
     def plot(self):
-        tau = np.array(self.probs)
-        cic = np.array(self.result.rx2('qte'))
+        tau = np.array(self.result.rx2('probs'))
+        qte = np.array(self.result.rx2('qte'))
 
-        # Garantir que 'tau' e 'cic' tenham a mesma dimensão
-        if len(cic.shape) > 1:
-            cic = cic.flatten()
+        # Garantir que 'tau' e 'qte' tenham a mesma dimensão
+        if len(qte.shape) > 1:
+            qte = qte.flatten()
 
-        # Verificar e ajustar as dimensões de 'tau' e 'cic'
-        if len(tau) != len(cic):
-            tau = np.linspace(tau[0], tau[-1], len(cic))
+        if len(tau) != len(qte):
+            tau = np.linspace(tau[0], tau[-1], len(qte))
 
         # Verificar se se=True para plotar com intervalos de confiança
-        if self.se and 'qte.lower' in self.result.names and 'qte.upper' in self.result.names:
-            lower_bound = self.result.rx2('qte.lower')
-            upper_bound = self.result.rx2('qte.upper')
+        if self.se and self.info.get('qte.lower') is not None and self.info.get('qte.upper') is not None:
+            lower_bound = self.info['qte.lower']
+            upper_bound = self.info['qte.upper']
 
-            # Verificar se lower_bound e upper_bound são válidos
-            if lower_bound and upper_bound:
-                lower_bound = np.array(lower_bound).flatten()
-                upper_bound = np.array(upper_bound).flatten()
-
-                plt.figure(figsize=(10, 6))
-                plt.plot(tau, cic, 'o-', label="CiC")
-                plt.fill_between(tau, lower_bound, upper_bound, color='gray', alpha=0.2, label="95% CI")
-            else:
-                print("Intervalos de confiança não disponíveis. Plotando apenas os pontos de CiC.")
-                plt.figure(figsize=(10, 6))
-                plt.plot(tau, cic, 'o-', label="CiC")
+            plt.figure(figsize=(10, 6))
+            plt.plot(tau, qte, 'o-', label="CiC")
+            plt.fill_between(tau, lower_bound, upper_bound, color='gray', alpha=0.2, label="95% CI")
         else:
             plt.figure(figsize=(10, 6))
-            plt.plot(tau, cic, 'o-', label="CiC")
+            plt.plot(tau, qte, 'o-', label="CiC")
         
         plt.axhline(y=0, color='r', linestyle='--', label="No Effect Line")
         plt.xlabel('Quantiles')
@@ -114,5 +115,4 @@ class CiCEstimator:
         plt.legend()
         plt.grid(True)
         plt.show()
-
 
