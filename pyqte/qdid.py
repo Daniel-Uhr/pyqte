@@ -56,8 +56,8 @@ class QDiDEstimator:
         
         Retorna:
         --------
-        summary : str
-            Um resumo textual dos resultados do QDiD.
+        summary : ListVector
+            Um resumo dos resultados do QDiD em formato ListVector.
         """
         qdid_result = self.estimate()
         summary = r.summary(qdid_result)
@@ -71,17 +71,9 @@ class QDiDEstimator:
         summary = self.summary()
 
         # Extraindo os dados do summary
-        lines = summary.splitlines()
-        tau = []
-        qte = []
-        std_error = []
-
-        for line in lines[3:]:
-            if line.strip():  # Ignorar linhas em branco
-                parts = line.split()
-                tau.append(float(parts[0]))
-                qte.append(float(parts[1]))
-                std_error.append(float(parts[2]))
+        tau = list(summary.rx2('tau'))
+        qte = list(summary.rx2('QTE'))
+        std_error = list(summary.rx2('Std. Error'))
 
         # Construindo o intervalo de confiança
         lower_bound = np.array(qte) - 1.96 * np.array(std_error)
@@ -99,3 +91,4 @@ class QDiDEstimator:
         plt.legend()
         plt.grid(True)
         plt.show()
+
