@@ -37,8 +37,8 @@ class CiCEstimator:
         self.retEachIter = retEachIter
 
     def fit(self):
-        with pandas2ri.converter:
-            r_data = pandas2ri.py2rpy(self.data)
+        with pandas2ri.localconverter(ro.default_converter + pandas2ri.converter):
+            r_data = ro.conversion.py2rpy(self.data)
 
         r_formula = Formula(self.formula)
         additional_args = {}
@@ -98,5 +98,3 @@ class CiCEstimator:
         plt.legend()
         plt.grid(True)
         plt.show()
-
-
