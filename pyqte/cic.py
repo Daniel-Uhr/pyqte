@@ -76,43 +76,46 @@ class CiCEstimator:
         return summary
 
     def plot(self):
-        # Verificar e imprimir os valores de 'probs'
-        tau = self.probs
-        print(f"tau (probs): {tau}, type: {type(tau)}, length: {len(tau)}")
+        # Verificar se a chave 'QTE' existe na result
+        if 'QTE' not in self.result.names:
+            print("Erro: 'QTE' não encontrado em self.result. Verifique a função CiC.")
+            return
 
         # Extrair e verificar os valores de 'QTE'
         cic = np.array(self.result.rx2('QTE'))
+        if cic is None or cic.size == 0:
+            cic = np.zeros(len(self.probs))  # Substituir por zeros se for nulo
         print(f"cic (QTE): {cic}, type: {type(cic)}, shape: {cic.shape}")
+
+        tau = self.probs
+        print(f"tau (probs): {tau}, type: {type(tau)}, length: {len(tau)}")
 
         # Garantir que 'tau' e 'cic' tenham a mesma dimensão
         if len(cic.shape) > 1:
             cic = cic.flatten()
 
-        # Verificar e ajustar as dimensões de 'tau' e 'cic'
         if len(tau) != len(cic):
             print(f"Dimension mismatch detected: len(tau)={len(tau)}, len(cic)={len(cic)}")
             tau = np.linspace(tau[0], tau[-1], len(cic))
-            print(f"Adjusted tau: {tau}, length: {len(tau)}")
 
         # Se se=True, verificar e imprimir os intervalos de confiança
         if self.se:
             lower_bound = np.array(self.result.rx2('QTE.lower')).flatten()
             upper_bound = np.array(self.result.rx2('QTE.upper')).flatten()
+
+            # Substituir por zeros se forem nulos
+            if lower_bound is None or lower_bound.size == 0:
+                lower_bound = np.zeros(len(tau))
+            if upper_bound is None or upper_bound.size == 0:
+                upper_bound = np.zeros(len(tau))
+
             print(f"lower_bound: {lower_bound}, shape: {lower_bound.shape}")
             print(f"upper_bound: {upper_bound}, shape: {upper_bound.shape}")
 
-            # Verificar se lower_bound e upper_bound têm a mesma dimensão de tau e cic
-            if len(lower_bound) == len(tau) and len(upper_bound) == len(tau):
-                print("Plotting with confidence intervals...")
-                plt.figure(figsize=(10, 6))
-                plt.plot(tau, cic, 'o-', label="CiC")
-                plt.fill_between(tau, lower_bound, upper_bound, color='gray', alpha=0.2, label="95% CI")
-            else:
-                print("Dimensões de lower_bound ou upper_bound não correspondem a tau. Plotagem do intervalo de confiança omitida.")
-                plt.figure(figsize=(10, 6))
-                plt.plot(tau, cic, 'o-', label="CiC")
+            plt.figure(figsize=(10, 6))
+            plt.plot(tau, cic, 'o-', label="CiC")
+            plt.fill_between(tau, lower_bound, upper_bound, color='gray', alpha=0.2, label="95% CI")
         else:
-            print("Plotting without confidence intervals...")
             plt.figure(figsize=(10, 6))
             plt.plot(tau, cic, 'o-', label="CiC")
         
