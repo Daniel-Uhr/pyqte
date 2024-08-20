@@ -3,6 +3,7 @@ import numpy as np
 import rpy2.robjects as ro
 from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
+from rpy2.robjects import Formula
 from rpy2.robjects.conversion import localconverter
 import matplotlib.pyplot as plt
 
@@ -117,6 +118,10 @@ class CiCEstimator:
         plt.legend()
         plt.grid(True)
         plt.show()
+
+    def get_results(self):
+        """Retorna um dicionário com todas as informações da estimativa."""
+        return self.info
 
     def get_results_dataframe(self):
         """Cria um DataFrame pandas com os resultados estimados, útil para criação de tabelas ou gráficos personalizados."""
