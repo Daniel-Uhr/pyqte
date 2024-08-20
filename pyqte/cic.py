@@ -86,6 +86,10 @@ class CiCEstimator:
         if len(tau) == 1:
             tau = np.linspace(tau[0], tau[0] + 0.1, len(cic))
 
+        # Verificar se tau e cic têm a mesma dimensão
+        if len(tau) != len(cic):
+            raise ValueError(f"tau and cic must have the same length, but have lengths {len(tau)} and {len(cic)}.")
+
         # Verificar se se=True para plotar com intervalos de confiança
         if self.se:
             lower_bound = np.array(self.result.rx2('QTE.lower'))
