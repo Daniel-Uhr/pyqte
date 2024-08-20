@@ -21,7 +21,7 @@ class QTETEstimator:
             self.probs = np.arange(probs[0], probs[1] + probs[2], probs[2])
         else:
             self.probs = probs if probs is not None else np.arange(0.05, 1, 0.05)
-        self.se = se
+        self.se = True
         self.iters = iters
         self.xformla = xformla
         self.method = method
