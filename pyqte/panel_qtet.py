@@ -29,7 +29,7 @@ class PanelQTETEstimator:
             else:
                 self.probs = r.FloatVector(probs)
         
-        self.se = se
+        self.se = True
         self.iters = iters
         self.method = method
 
