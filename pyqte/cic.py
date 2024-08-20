@@ -82,12 +82,23 @@ class CiCEstimator:
         tau = np.array(self.probs)
         cic = np.array(self.result.rx2('QTE'))
 
+        # Verificar se tau e cic têm a mesma dimensão
+        if len(tau) != len(cic):
+            raise ValueError(f"tau and cic must have the same length, but have lengths {len(tau)} and {len(cic)}.")
+
         if self.se:
             lower_bound = np.array(self.result.rx2('QTE.lower'))
             upper_bound = np.array(self.result.rx2('QTE.upper'))
-            plt.figure(figsize=(10, 6))
-            plt.plot(tau, cic, 'o-', label="CiC")
-            plt.fill_between(tau, lower_bound, upper_bound, color='gray', alpha=0.2, label="95% CI")
+
+            # Verificar se lower_bound e upper_bound têm a mesma dimensão de tau e cic
+            if len(lower_bound) == len(tau) and len(upper_bound) == len(tau):
+                plt.figure(figsize=(10, 6))
+                plt.plot(tau, cic, 'o-', label="CiC")
+                plt.fill_between(tau, lower_bound, upper_bound, color='gray', alpha=0.2, label="95% CI")
+            else:
+                print("Dimensões de lower_bound ou upper_bound não correspondem a tau. Plotagem do intervalo de confiança omitida.")
+                plt.figure(figsize=(10, 6))
+                plt.plot(tau, cic, 'o-', label="CiC")
         else:
             plt.figure(figsize=(10, 6))
             plt.plot(tau, cic, 'o-', label="CiC")
@@ -99,4 +110,3 @@ class CiCEstimator:
         plt.legend()
         plt.grid(True)
         plt.show()
-
