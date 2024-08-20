@@ -1,6 +1,6 @@
 from rpy2.robjects import r, Formula
 from rpy2.robjects.packages import importr
-from rpy2.robjects import pandas2ri, ro
+from rpy2.robjects import pandas2ri
 import numpy as np
 
 # Ativar a conversão pandas para R DataFrame
@@ -21,13 +21,13 @@ class PanelQTETEstimator:
         
         # Processar 'probs' como um vetor numérico em R
         if probs is None:
-            self.probs = ro.FloatVector(np.linspace(0.05, 0.95, 19))
+            self.probs = r.seq(0.05, 0.95, by=0.05)
         else:
             if len(probs) == 3:
-                self.probs = ro.FloatVector(np.arange(probs[0], probs[1] + probs[2], probs[2]))
+                self.probs = r.seq(probs[0], probs[1], by=probs[2])
             else:
-                self.probs = ro.FloatVector(probs)
-            
+                self.probs = r.FloatVector(probs)
+        
         self.se = se
         self.iters = iters
         self.method = method
@@ -49,10 +49,10 @@ class PanelQTETEstimator:
         return self.result
 
     def summary(self):
-        summary = ro.r.summary(self.result)
+        summary = r.summary(self.result)
         print(summary)
         return summary
-
+        
     def plot(self):
         """
         Plota os resultados da estimativa QTET.
