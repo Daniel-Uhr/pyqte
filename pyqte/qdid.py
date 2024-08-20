@@ -20,7 +20,13 @@ class QDiDEstimator:
         self.tmin1 = tmin1
         self.idname = idname
         self.tname = tname
-        self.probs = probs if probs is not None else r.seq(0.05, 0.95, 0.05)
+        
+        # Se probs for uma lista de três elementos, interpretá-la como uma sequência R
+        if isinstance(probs, list) and len(probs) == 3:
+            self.probs = r.seq(probs[0], probs[1], probs[2])
+        else:
+            self.probs = probs  # caso contrário, use como está
+
         self.se = se
         self.iters = iters
 
@@ -88,3 +94,4 @@ class QDiDEstimator:
         plt.title('Quantile Difference-in-Differences (QDiD) Estimates')
         plt.grid(True)
         plt.show()
+
