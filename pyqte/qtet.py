@@ -26,13 +26,13 @@ class QTETEstimator:
         self.xformla = xformla
         self.method = method
 
-    def estimate(self):
+    def fit(self):
         r_formula = Formula(self.formula)
         r_data = pandas2ri.py2rpy(self.data)
 
         if self.xformla:
             r_xformla = Formula(self.xformla)
-            result = qte.ci_qtet(
+            self.result = qte.ci_qtet(
                 formla=r_formula,
                 xformla=r_xformla,
                 data=r_data,
@@ -42,7 +42,7 @@ class QTETEstimator:
                 method=self.method
             )
         else:
-            result = qte.ci_qtet(
+            self.result = qte.ci_qtet(
                 formla=r_formula,
                 data=r_data,
                 probs=ro.FloatVector(self.probs),
@@ -50,22 +50,18 @@ class QTETEstimator:
                 iters=self.iters,
                 method=self.method
             )
-        return result
 
     def summary(self):
-        result = self.estimate()
-        summary = ro.r.summary(result)
+        summary = ro.r.summary(self.result)
         print(summary)
         return summary
 
     def plot(self):
-        result = self.estimate()
-
         # Extraindo os dados do resultado
-        tau = np.linspace(self.probs[0], self.probs[-1], len(result.rx2('qte')))
-        qte = np.array(result.rx2('qte'))
-        lower_bound = np.array(result.rx2('qte.lower'))
-        upper_bound = np.array(result.rx2('qte.upper'))
+        tau = np.linspace(self.probs[0], self.probs[-1], len(self.result.rx2('qte')))
+        qte = np.array(self.result.rx2('qte'))
+        lower_bound = np.array(self.result.rx2('qte.lower'))
+        upper_bound = np.array(self.result.rx2('qte.upper'))
 
         # Criar o gráfico
         plt.figure(figsize=(10, 6))
@@ -78,5 +74,3 @@ class QTETEstimator:
         plt.legend()
         plt.grid(True)
         plt.show()
-
-
