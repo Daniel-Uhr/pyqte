@@ -25,9 +25,9 @@ class CiCEstimator:
         
         # Processar 'probs' como um vetor numérico em R
         if isinstance(probs, list) and len(probs) == 3:
-            self.probs = np.arange(probs[0], probs[1] + probs[2], probs[2])
+            self.probs = ro.FloatVector(np.arange(probs[0], probs[1] + probs[2], probs[2]))
         else:
-            self.probs = probs
+            self.probs = ro.FloatVector(probs)
 
         self.se = se
         self.iters = iters
@@ -60,7 +60,7 @@ class CiCEstimator:
             tmin1=self.tmin1,
             tname=self.tname,
             data=r_data,
-            probs=ro.FloatVector(self.probs),
+            probs=self.probs,
             se=self.se,
             iters=self.iters,
             alp=self.alp,
@@ -76,26 +76,29 @@ class CiCEstimator:
         return summary
 
     def plot(self):
-        """
-        Plota as estimativas do CiC com intervalos de confiança, se disponíveis.
-        """
         tau = np.array(self.probs)
         cic = np.array(self.result.rx2('QTE'))
 
-        # Verificar se tau e cic têm a mesma dimensão
-        if len(tau) != len(cic):
-            raise ValueError(f"tau and cic must have the same length, but have lengths {len(tau)} and {len(cic)}.")
-
+        # Verificar se se=True para plotar com intervalos de confiança
         if self.se:
-            lower_bound = np.array(self.result.rx2('QTE.lower'))
-            upper_bound = np.array(self.result.rx2('QTE.upper'))
+            # Verificar se os intervalos de confiança existem e são numéricos
+            if 'QTE.lower' in self.result.names and 'QTE.upper' in self.result.names:
+                lower_bound = np.array(self.result.rx2('QTE.lower'))
+                upper_bound = np.array(self.result.rx2('QTE.upper'))
 
-            # Criar o gráfico com intervalos de confiança
-            plt.figure(figsize=(10, 6))
-            plt.plot(tau, cic, 'o-', label="CiC")
-            plt.fill_between(tau, lower_bound, upper_bound, color='gray', alpha=0.2, label="95% CI")
+                # Verificar se os valores de lower_bound e upper_bound são válidos para plotagem
+                if np.issubdtype(lower_bound.dtype, np.number) and np.issubdtype(upper_bound.dtype, np.number):
+                    plt.figure(figsize=(10, 6))
+                    plt.plot(tau, cic, 'o-', label="CiC")
+                    plt.fill_between(tau, lower_bound, upper_bound, color='gray', alpha=0.2, label="95% CI")
+                else:
+                    print("Intervalos de confiança contêm valores não numéricos. Plotagem omitida.")
+            else:
+                print("Intervalos de confiança não estão disponíveis. Plotando apenas os valores de CiC.")
+                plt.figure(figsize=(10, 6))
+                plt.plot(tau, cic, 'o-', label="CiC")
         else:
-            # Criar o gráfico apenas com os pontos estimados
+            # Se se=False, plotar apenas os pontos sem intervalos de confiança
             plt.figure(figsize=(10, 6))
             plt.plot(tau, cic, 'o-', label="CiC")
         
