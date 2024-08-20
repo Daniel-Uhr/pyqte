@@ -82,24 +82,21 @@ class CiCEstimator:
         tau = np.array(self.probs)
         cic = np.array(self.result.rx2('QTE'))
 
-        # Verificar se tau e cic têm a mesma dimensão
-        if len(tau) != len(cic):
-            raise ValueError(f"tau and cic must have the same length, but have lengths {len(tau)} and {len(cic)}.")
+        # Ajuste para garantir que os dados sejam plotáveis
+        if len(tau) == 1:
+            tau = np.linspace(tau[0], tau[0] + 0.1, len(cic))
 
+        # Verificar se se=True para plotar com intervalos de confiança
         if self.se:
             lower_bound = np.array(self.result.rx2('QTE.lower'))
             upper_bound = np.array(self.result.rx2('QTE.upper'))
 
-            # Verificar se lower_bound e upper_bound têm a mesma dimensão de tau e cic
-            if len(lower_bound) == len(tau) and len(upper_bound) == len(tau):
-                plt.figure(figsize=(10, 6))
-                plt.plot(tau, cic, 'o-', label="CiC")
-                plt.fill_between(tau, lower_bound, upper_bound, color='gray', alpha=0.2, label="95% CI")
-            else:
-                print("Dimensões de lower_bound ou upper_bound não correspondem a tau. Plotagem do intervalo de confiança omitida.")
-                plt.figure(figsize=(10, 6))
-                plt.plot(tau, cic, 'o-', label="CiC")
+            # Criar o gráfico com intervalos de confiança
+            plt.figure(figsize=(10, 6))
+            plt.plot(tau, cic, 'o-', label="CiC")
+            plt.fill_between(tau, lower_bound, upper_bound, color='gray', alpha=0.2, label="95% CI")
         else:
+            # Criar o gráfico apenas com os pontos estimados
             plt.figure(figsize=(10, 6))
             plt.plot(tau, cic, 'o-', label="CiC")
         
@@ -110,3 +107,4 @@ class CiCEstimator:
         plt.legend()
         plt.grid(True)
         plt.show()
+
