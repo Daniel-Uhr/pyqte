@@ -40,4 +40,30 @@ class QDiDEstimator:
         summary = r.summary(qdid_result)
         print(summary)
 
+    def plot(self):
+        """
+        Plota as estimativas do QDiD com intervalos de confiança, se disponíveis.
+        """
+        qte_results = self.estimate()
 
+        # Extraindo os dados do summary
+        tau = list(qte_results.rx2('qte').names)
+        qte = list(qte_results.rx2('qte'))
+        lower_bound = list(qte_results.rx2('qte.lower'))
+        upper_bound = list(qte_results.rx2('qte.upper'))
+
+        # Convertendo tau de string para float
+        tau = [float(t.replace('%', '')) / 100 for t in tau]
+
+        # Criar o gráfico
+        plt.figure(figsize=(10, 6))
+        plt.plot(tau, qte, 'o-', label="QTE")
+        plt.fill_between(tau, lower_bound, upper_bound, color='gray', alpha=0.2, label="95% CI")
+
+        plt.axhline(y=0, color='r', linestyle='--', label="No Effect Line")
+        plt.xlabel('Quantiles')
+        plt.ylabel('QTE Estimates')
+        plt.title('Quantile Treatment Effects (QDiD)')
+        plt.legend()
+        plt.grid(True)
+        plt.show()
