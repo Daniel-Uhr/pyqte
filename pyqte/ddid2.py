@@ -1,13 +1,15 @@
 import pandas as pd
+import numpy as np
 from rpy2.robjects import r, Formula
 from rpy2.robjects.packages import importr
 from rpy2.robjects import pandas2ri
-from .data_loader import prepare_r_data, create_formula
+from rpy2.robjects.conversion import localconverter
+import matplotlib.pyplot as plt
 
-# Activate the pandas conversion to R dataframes
+# Ativar a conversão automática de pandas DataFrames para R data.frames
 pandas2ri.activate()
 
-# Import the necessary R packages
+# Importar o pacote qte do R
 qte = importr('qte')
 
 class DDID2Estimator:
@@ -26,17 +28,21 @@ class DDID2Estimator:
         The name of the time variable.
     id_var : str
         The name of the individual identifier variable.
+    covariates : list of str, optional
+        List of covariates to include in the model.
     """
-    
+
     def __init__(self, data, outcome, treatment, time_var, id_var, covariates=None):
-        self.data = prepare_r_data(data)
+        self.data = data
         self.outcome = outcome
         self.treatment = treatment
         self.time_var = time_var
         self.id_var = id_var
         self.covariates = covariates if covariates else []
+        self.result = None
+        self.info = {}
 
-    def estimate(self, t, tmin1, tmin2, probs=None, se=True, iters=100, alp=0.05):
+    def estimate(self, t, tmin1, tmin2, probs=None, se=True, iters=100, alp=0.05, method="logit", retEachIter=False, panel=True, cores=None):
         """
         Estimate the DDID2 effect.
         
@@ -56,82 +62,115 @@ class DDID2Estimator:
             The number of bootstrap iterations for standard errors (default is 100).
         alp : float, optional
             The significance level for confidence intervals (default is 0.05).
-        
-        Returns:
-        --------
-        results : dict
-            A dictionary containing the estimated DDID2 effects and standard errors.
+        method : str, optional
+            The method for estimating the propensity score (default is "logit").
+        retEachIter : bool, optional
+            Whether to return results for each bootstrap iteration (default is False).
+        panel : bool, optional
+            Whether the data is panel or repeated cross sections (default is True).
+        cores : int, optional
+            The number of cores to use for parallel processing (default is None).
         """
-        formula_str = f"{self.outcome} ~ {self.treatment}"
-        formula = create_formula(self.outcome, [self.treatment] + self.covariates)
-        
-        ddid2_result = qte.ddid2(
-            formla=Formula(formula_str),
-            t=t,
-            tmin1=tmin1,
-            tmin2=tmin2,
-            tname=self.time_var,
-            idname=self.id_var,
-            data=self.data,
-            probs=r.probs if probs else r.seq(0.05, 0.95, 0.05),
-            se=se,
-            iters=iters,
-            alp=alp
-        )
-        
-        # Extract results from the R object
-        qte_estimates = dict(zip(ddid2_result.rx2('probs'), ddid2_result.rx2('qte')))
-        se_estimates = dict(zip(ddid2_result.rx2('probs'), ddid2_result.rx2('qte.se')))
-        ate_estimate = ddid2_result.rx2('ate')[0]
-        ate_se_estimate = ddid2_result.rx2('ate.se')[0]
-        
-        results = {
-            'qte': qte_estimates,
-            'qte.se': se_estimates,
-            'ate': ate_estimate,
-            'ate.se': ate_se_estimate
-        }
-        
-        return results
+        r_formula = Formula(f"{self.outcome} ~ {self.treatment}")
+        r_data = pandas2ri.py2rpy(self.data)
 
-    def summary(self, results):
+        additional_args = {
+            't': t,
+            'tmin1': tmin1,
+            'tmin2': tmin2,
+            'tname': self.time_var,
+            'idname': self.id_var,
+            'probs': r.seq(0.05, 0.95, 0.05) if probs is None else ro.FloatVector(probs),
+            'se': se,
+            'iters': iters,
+            'alp': alp,
+            'method': method,
+            'retEachIter': retEachIter,
+            'panel': panel,
+            'cores': cores
+        }
+
+        if self.covariates:
+            r_xformla = Formula(f"~ {' + '.join(self.covariates)}")
+            additional_args['xformla'] = r_xformla
+
+        self.result = qte.ddid2(
+            formla=r_formula,
+            data=r_data,
+            **additional_args
+        )
+
+        # Armazenar os resultados na variável self.info para futura extração
+        self.info['qte'] = np.array(self.result.rx2('qte'))
+        self.info['ate'] = np.array(self.result.rx2('ate'))[0]
+        self.info['probs'] = np.array(self.result.rx2('probs'))
+        self.info['qte.se'] = np.array(self.result.rx2('qte.se')) if se else None
+        self.info['qte.lower'] = np.array(self.result.rx2('qte.lower')) if se else None
+        self.info['qte.upper'] = np.array(self.result.rx2('qte.upper')) if se else None
+
+    def summary(self):
         """
         Generate a summary of the DDID2 estimation results.
-        
-        Parameters:
-        -----------
-        results : dict
-            The results from the DDID2 estimation.
         
         Returns:
         --------
         summary : str
             A summary of the DDID2 estimation results.
         """
+        if self.result is None:
+            raise ValueError("Model has not been fitted yet. Call `fit()` before calling `summary()`.")
+        
         summary_str = "DDID2 Estimation Results:\n"
         summary_str += "Quantile Treatment Effects (QTE):\n"
-        for prob, qte in results['qte'].items():
-            summary_str += f"Quantile {prob:.2f}: QTE = {qte:.4f}, SE = {results['qte.se'][prob]:.4f}\n"
-        summary_str += f"\nAverage Treatment Effect (ATE): {results['ate']:.4f}, SE: {results['ate.se']:.4f}\n"
+        for prob, qte in zip(self.info['probs'], self.info['qte']):
+            summary_str += f"Quantile {prob:.2f}: QTE = {qte:.4f}"
+            if self.se:
+                summary_str += f", SE = {self.info['qte.se'][int(prob*20)]:.4f}\n"
+            else:
+                summary_str += "\n"
+        summary_str += f"\nAverage Treatment Effect (ATE): {self.info['ate']:.4f}\n"
         return summary_str
 
-    def plot(self, results):
+    def plot(self):
         """
         Plot the DDID2 estimation results.
-        
-        Parameters:
-        -----------
-        results : dict
-            The results from the DDID2 estimation.
         """
-        import matplotlib.pyplot as plt
+        if self.result is None:
+            raise ValueError("Model has not been fitted yet. Call `fit()` before calling `plot()`.")
         
-        quantiles = list(results['qte'].keys())
-        qte_values = list(results['qte'].values())
-        qte_se_values = list(results['qte.se'].values())
-        
-        plt.errorbar(quantiles, qte_values, yerr=qte_se_values, fmt='o')
+        quantiles = self.info['probs']
+        qte_values = self.info['qte']
+
+        plt.figure(figsize=(10, 6))
+        plt.plot(quantiles, qte_values, 'o-', label="QTE")
+
+        if self.se and 'qte.lower' in self.info and 'qte.upper' in self.info:
+            plt.fill_between(quantiles, self.info['qte.lower'], self.info['qte.upper'], color='gray', alpha=0.2, label="95% CI")
+
+        plt.axhline(y=0, color='r', linestyle='--', label="No Effect Line")
         plt.xlabel('Quantiles')
-        plt.ylabel('QTE')
+        plt.ylabel('QTE Estimates')
         plt.title('DDID2: Quantile Treatment Effects')
+        plt.legend()
+        plt.grid(True)
         plt.show()
+
+    def get_results(self):
+        """
+        Return the estimation results as a DataFrame for further analysis.
+        
+        Returns:
+        --------
+        results_df : pandas.DataFrame
+            A DataFrame containing the QTE, SE (if available), and confidence intervals (if available) for each quantile.
+        """
+        data = {
+            'Quantile': self.info['probs'],
+            'QTE': self.info['qte']
+        }
+        if self.se:
+            data['QTE Lower Bound'] = self.info.get('qte.lower', np.full(len(self.info['probs']), np.nan))
+            data['QTE Upper Bound'] = self.info.get('qte.upper', np.full(len(self.info['probs']), np.nan))
+            data['SE'] = self.info.get('qte.se', np.full(len(self.info['probs']), np.nan))
+
+        return pd.DataFrame(data)
