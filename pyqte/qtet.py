@@ -30,6 +30,7 @@ class QTETEstimator:
         self.pl = pl
         self.cores = cores
         self.result = None
+        self.info = {}
 
     def fit(self):
         r_formula = Formula(self.formula)
@@ -60,6 +61,18 @@ class QTETEstimator:
             probs=ro.FloatVector(self.probs),
             **additional_args
         )
+        self._extract_info()
+
+    def _extract_info(self):
+        self.info['qte'] = np.array(self.result.rx2('qte'))
+        self.info['probs'] = np.array(self.probs)
+        
+        if self.se:
+            self.info['qte.lower'] = np.array(self.result.rx2('qte.lower'))
+            self.info['qte.upper'] = np.array(self.result.rx2('qte.upper'))
+        else:
+            self.info['qte.lower'] = None
+            self.info['qte.upper'] = None
 
     def summary(self):
         if self.result is None:
@@ -96,3 +109,17 @@ class QTETEstimator:
         plt.legend()
         plt.grid(True)
         plt.show()
+
+    def get_results(self):
+        """Cria um DataFrame pandas com os resultados estimados."""
+        df = pd.DataFrame({
+            'Quantile': self.info['probs'],
+            'QTE': self.info['qte']
+        })
+        
+        if self.se and self.info['qte.lower'] is not None and self.info['qte.upper'] is not None:
+            df['QTE Lower Bound'] = self.info['qte.lower']
+            df['QTE Upper Bound'] = self.info['qte.upper']
+        
+        return df
+
