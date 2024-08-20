@@ -1,8 +1,10 @@
 import pandas as pd
+import numpy as np
 import rpy2.robjects as ro
 from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 from rpy2.robjects.conversion import localconverter
+import matplotlib.pyplot as plt
 
 # Ativando a conversão automática de pandas DataFrame para R DataFrame
 pandas2ri.activate()
@@ -24,8 +26,8 @@ class QTEEstimator:
         A string representing the covariates formula (e.g., '~ age + education').
     data : pandas.DataFrame
         The dataset containing the variables specified in the formula.
-    probs : list of float
-        A list of quantiles at which to estimate the treatment effect.
+    probs : list of float or None
+        A list of quantiles at which to estimate the treatment effect, or None to use default.
     se : bool, optional
         Whether to compute standard errors (default is False).
     iters : int, optional
@@ -41,13 +43,14 @@ class QTEEstimator:
         Generates a plot of the QTE results.
     """
 
-    def __init__(self, formula, xformla, data, probs, se=False, iters=100):
+    def __init__(self, formula, xformla, data, probs=None, se=False, iters=100):
         self.formula = formula
         self.xformla = xformla
         self.data = data
-        self.probs = probs
+        self.probs = probs if probs is not None else np.arange(0.05, 1.00, 0.05)
         self.se = se
         self.iters = iters
+        self.result = None
 
     def fit(self):
         """
@@ -58,7 +61,7 @@ class QTEEstimator:
             r_data = ro.conversion.py2rpy(self.data)
 
         # Chama a função ci_qte do pacote R qte
-        result = qte.ci_qte(
+        self.result = qte.ci_qte(
             formla=ro.Formula(self.formula),
             xformla=ro.Formula(self.xformla),
             data=r_data,
@@ -66,8 +69,6 @@ class QTEEstimator:
             se=self.se,
             iters=self.iters
         )
-
-        self.result = result
 
     def summary(self):
         """
@@ -77,7 +78,26 @@ class QTEEstimator:
 
     def plot(self):
         """
-        Generates a plot of the QTE results using the R plot function.
+        Generates a plot of the QTE results using Matplotlib.
         """
-        ro.r.plot(self.result)
+        if self.result is None:
+            raise ValueError("No results to plot. Please run the 'fit' method first.")
+
+        # Extrair os resultados
+        qte = np.array(self.result.rx2('qte'))
+        qte_lower = np.array(self.result.rx2('qte.lower'))
+        qte_upper = np.array(self.result.rx2('qte.upper'))
+        tau = np.linspace(0.05, 0.95, len(qte))
+
+        # Plotar os resultados
+        plt.figure(figsize=(10, 6))
+        plt.plot(tau, qte, 'o-', label="QTE")
+        plt.fill_between(tau, qte_lower, qte_upper, color='gray', alpha=0.2, label="95% CI")
+        plt.axhline(y=0, color='r', linestyle='--', label="No Effect Line")
+        plt.xlabel('Quantiles')
+        plt.ylabel('QTE Estimates')
+        plt.title('Quantile Treatment Effects (QTE)')
+        plt.legend()
+        plt.grid(True)
+        plt.show()
 
