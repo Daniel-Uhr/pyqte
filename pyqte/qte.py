@@ -13,16 +13,11 @@ pandas2ri.activate()
 qte = importr('qte')
 
 class QTEEstimator:
-    def __init__(self, formula, xformla, data, probs=[0.05, 0.95, 0.05], se=True, iters=100, method='logit', w=None, pl=False, cores=2):
+    def __init__(self, formula, xformla=None, data=None, probs=[0.05, 0.95, 0.05], se=False, iters=100):
         self.formula = formula
         self.xformla = xformla
         self.data = data
-        self.method = method
-        self.w = w
-        self.pl = pl
-        self.cores = cores
 
-        # Handle the probs argument to create a sequence
         if isinstance(probs, list) and len(probs) == 3:
             self.probs = ro.FloatVector(np.arange(probs[0], probs[1] + probs[2], probs[2]))
         else:
@@ -35,25 +30,24 @@ class QTEEstimator:
         with localconverter(ro.default_converter + pandas2ri.converter):
             r_data = ro.conversion.py2rpy(self.data)
 
-        # Prepare additional arguments based on presence
-        additional_args = {}
-        if self.w is not None:
-            additional_args['w'] = ro.FloatVector(self.w)
-        if self.pl:
-            additional_args['pl'] = True
-            additional_args['cores'] = self.cores
-
         # Call the qte function from the R qte package
-        result = qte.ci_qte(
-            formla=ro.Formula(self.formula),
-            xformla=ro.Formula(self.xformla),
-            data=r_data,
-            probs=self.probs,
-            se=self.se,
-            iters=self.iters,
-            method=self.method,
-            **additional_args  # Add additional args if provided
-        )
+        if self.xformla is not None:
+            result = qte.ci_qte(
+                formla=ro.Formula(self.formula),
+                xformla=ro.Formula(self.xformla),
+                data=r_data,
+                probs=self.probs,
+                se=self.se,
+                iters=self.iters
+            )
+        else:
+            result = qte.ci_qte(
+                formla=ro.Formula(self.formula),
+                data=r_data,
+                probs=self.probs,
+                se=self.se,
+                iters=self.iters
+            )
 
         self.result = result
 
