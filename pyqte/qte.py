@@ -13,22 +13,35 @@ pandas2ri.activate()
 qte = importr('qte')
 
 class QTEEstimator:
-    def __init__(self, formula, xformla, data, probs=[0.05, 0.95, 0.05], se=False, iters=100):
+    def __init__(self, formula, xformla, data, probs=[0.05, 0.95, 0.05], se=True, iters=100, method='logit', w=None, pl=False, cores=2):
         self.formula = formula
         self.xformla = xformla
         self.data = data
+        self.method = method
+        self.w = w
+        self.pl = pl
+        self.cores = cores
 
+        # Handle the probs argument to create a sequence
         if isinstance(probs, list) and len(probs) == 3:
             self.probs = ro.FloatVector(np.arange(probs[0], probs[1] + probs[2], probs[2]))
         else:
             self.probs = ro.FloatVector(probs)
             
-        self.se = True
+        self.se = se
         self.iters = iters
 
     def fit(self):
         with localconverter(ro.default_converter + pandas2ri.converter):
             r_data = ro.conversion.py2rpy(self.data)
+
+        # Prepare additional arguments based on presence
+        additional_args = {}
+        if self.w is not None:
+            additional_args['w'] = ro.FloatVector(self.w)
+        if self.pl:
+            additional_args['pl'] = True
+            additional_args['cores'] = self.cores
 
         # Call the qte function from the R qte package
         result = qte.ci_qte(
@@ -37,7 +50,9 @@ class QTEEstimator:
             data=r_data,
             probs=self.probs,
             se=self.se,
-            iters=self.iters
+            iters=self.iters,
+            method=self.method,
+            **additional_args  # Add additional args if provided
         )
 
         self.result = result
@@ -63,3 +78,4 @@ class QTEEstimator:
         plt.legend()
         plt.grid(True)
         plt.show()
+
