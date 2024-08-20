@@ -13,7 +13,7 @@ pandas2ri.activate()
 qte = importr('qte')
 
 class QTETEstimator:
-    def __init__(self, formula, data, probs=None, se=True, iters=100, xformla=None):
+    def __init__(self, formula, data, probs=None, se=True, iters=100, xformla=None, method='logit'):
         self.formula = formula
         self.data = data
         # Se probs for uma lista de três elementos, interprete como início, fim, incremento
@@ -24,6 +24,7 @@ class QTETEstimator:
         self.se = se
         self.iters = iters
         self.xformla = xformla
+        self.method = method
 
     def estimate(self):
         r_formula = Formula(self.formula)
@@ -37,7 +38,8 @@ class QTETEstimator:
                 data=r_data,
                 probs=ro.FloatVector(self.probs),
                 se=self.se,
-                iters=self.iters
+                iters=self.iters,
+                method=self.method
             )
         else:
             result = qte.ci_qtet(
@@ -45,7 +47,8 @@ class QTETEstimator:
                 data=r_data,
                 probs=ro.FloatVector(self.probs),
                 se=self.se,
-                iters=self.iters
+                iters=self.iters,
+                method=self.method
             )
         return result
 
