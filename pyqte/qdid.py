@@ -10,16 +10,17 @@ pandas2ri.activate()
 
 # Importando o pacote qte do R
 qte = importr('qte')
+r = ro.r  # Acessando o ambiente R diretamente
 
 class QDiDEstimator:
-    def __init__(self, formula, data, t, tmin1, idname, tname, probs=[0.05, 0.5, 0.95], se=True, iters=100):
+    def __init__(self, formula, data, t, tmin1, idname, tname, probs=None, se=True, iters=100):
         self.formula = formula
         self.data = data
         self.t = t
         self.tmin1 = tmin1
         self.idname = idname
         self.tname = tname
-        self.probs = probs
+        self.probs = probs if probs is not None else r.seq(0.05, 0.95, 0.05)
         self.se = se
         self.iters = iters
 
@@ -38,18 +39,15 @@ class QDiDEstimator:
         # Preparar a fórmula para R
         r_formula = Formula(self.formula)
 
-        # Criando a sequência de probabilidades para os quantis em formato R
-        r_probs = ro.FloatVector(self.probs)
-
         # Chama a função QDiD do pacote qte do R
         qdid_result = qte.QDiD(r_formula, data=r_data, t=self.t, tmin1=self.tmin1,
-                               idname=self.idname, tname=self.tname, probs=r_probs,
+                               idname=self.idname, tname=self.tname, probs=self.probs,
                                se=self.se, iters=self.iters, panel=True)
 
         # Extrair os resultados em um dicionário
         results = {
             'qdid': np.array(qdid_result.rx2('QTE')),
-            'probs': self.probs
+            'probs': np.array(self.probs)
         }
 
         if self.se:
@@ -68,7 +66,7 @@ class QDiDEstimator:
         """
         results = self.estimate()
         summary_str = "Quantile Difference-in-Differences (QDiD) Results:\n"
-        summary_str += "Quantiles: " + str(self.probs) + "\n"
+        summary_str += "Quantiles: " + str(results['probs']) + "\n"
         summary_str += "QDiD Estimates: " + str(results['qdid']) + "\n"
         
         if self.se:
@@ -84,7 +82,7 @@ class QDiDEstimator:
 
         results = self.estimate()
         
-        plt.errorbar(self.probs, results['qdid'], yerr=results.get('se', None), fmt='o', capsize=5)
+        plt.errorbar(results['probs'], results['qdid'], yerr=results.get('se', None), fmt='o', capsize=5)
         plt.xlabel('Quantiles')
         plt.ylabel('QDiD Estimates')
         plt.title('Quantile Difference-in-Differences (QDiD) Estimates')
