@@ -68,29 +68,22 @@ class QDiDEstimator:
         """
         Plota as estimativas do QDiD com intervalos de confiança, se disponíveis.
         """
-        import matplotlib.pyplot as plt
-        
         # Estimando os resultados
         results = self.estimate()
         
-        # Extraindo os quantis, estimativas QTE e erros padrão do objeto de resultados
-        quantiles = np.array(results.rx2('probs'))
-        qte_estimates = np.array(results.rx2('qdid'))
-        std_errors = np.array(results.rx2('se')) if 'se' in results.names else None
-        
-        # Verificando os tamanhos das listas
-        print("Tamanhos das listas:")
-        print(f"Tamanho de quantiles: {quantiles.size}")
-        print(f"Tamanho de qte_estimates: {qte_estimates.size}")
-        if std_errors is not None:
-            print(f"Tamanho de std_errors: {std_errors.size}")
-        
+        # Extraindo os dados necessários para o gráfico
+        tau = np.array(results.rx2('probs'))
+        qte = np.array(results.rx2('qdid'))
+        std_error = np.array(results.rx2('se'))
+
+        # Construindo o intervalo de confiança
+        lower_bound = qte - 1.96 * std_error
+        upper_bound = qte + 1.96 * std_error
+
         # Criar o gráfico
         plt.figure(figsize=(10, 6))
-        if std_errors is not None:
-            plt.errorbar(quantiles, qte_estimates, yerr=std_errors, fmt='o', capsize=5, label="QTE with Std. Error")
-        else:
-            plt.plot(quantiles, qte_estimates, 'o-', label="QTE")
+        plt.plot(tau, qte, 'o-', label="QTE")
+        plt.fill_between(tau, lower_bound, upper_bound, color='gray', alpha=0.2, label="95% CI")
         
         plt.axhline(y=0, color='r', linestyle='--', label="No Effect Line")
         plt.xlabel('Quantiles')
