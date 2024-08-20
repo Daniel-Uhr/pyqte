@@ -1,9 +1,9 @@
+from pyqte.cic import CiCEstimator
 import pandas as pd
 import numpy as np
 import rpy2.robjects as ro
 from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
-from rpy2.robjects import Formula
 from rpy2.robjects.conversion import localconverter
 import matplotlib.pyplot as plt
 
@@ -79,26 +79,22 @@ class CiCEstimator:
         tau = np.array(self.probs)
         cic = np.array(self.result.rx2('QTE'))
 
+        # Garantir que 'tau' e 'cic' tenham a mesma dimensão
+        if len(cic.shape) > 1:
+            cic = cic.flatten()
+
+        if len(tau) != len(cic):
+            tau = np.linspace(tau[0], tau[-1], len(cic))
+
         # Verificar se se=True para plotar com intervalos de confiança
         if self.se:
-            # Verificar se os intervalos de confiança existem e são numéricos
-            if 'QTE.lower' in self.result.names and 'QTE.upper' in self.result.names:
-                lower_bound = np.array(self.result.rx2('QTE.lower'))
-                upper_bound = np.array(self.result.rx2('QTE.upper'))
+            lower_bound = np.array(self.result.rx2('QTE.lower')).flatten()
+            upper_bound = np.array(self.result.rx2('QTE.upper')).flatten()
 
-                # Verificar se os valores de lower_bound e upper_bound são válidos para plotagem
-                if np.issubdtype(lower_bound.dtype, np.number) and np.issubdtype(upper_bound.dtype, np.number):
-                    plt.figure(figsize=(10, 6))
-                    plt.plot(tau, cic, 'o-', label="CiC")
-                    plt.fill_between(tau, lower_bound, upper_bound, color='gray', alpha=0.2, label="95% CI")
-                else:
-                    print("Intervalos de confiança contêm valores não numéricos. Plotagem omitida.")
-            else:
-                print("Intervalos de confiança não estão disponíveis. Plotando apenas os valores de CiC.")
-                plt.figure(figsize=(10, 6))
-                plt.plot(tau, cic, 'o-', label="CiC")
+            plt.figure(figsize=(10, 6))
+            plt.plot(tau, cic, 'o-', label="CiC")
+            plt.fill_between(tau, lower_bound, upper_bound, color='gray', alpha=0.2, label="95% CI")
         else:
-            # Se se=False, plotar apenas os pontos sem intervalos de confiança
             plt.figure(figsize=(10, 6))
             plt.plot(tau, cic, 'o-', label="CiC")
         
@@ -109,5 +105,3 @@ class CiCEstimator:
         plt.legend()
         plt.grid(True)
         plt.show()
-
-
