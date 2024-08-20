@@ -43,7 +43,9 @@ class QTEEstimator:
         self.result = result
 
     def summary(self):
-        return ro.r.summary(self.result)
+        summary = ro.r.summary(self.result)
+        print(summary)
+        return summary
 
     def plot(self):
         tau = np.array(self.probs)
@@ -61,4 +63,3 @@ class QTEEstimator:
         plt.legend()
         plt.grid(True)
         plt.show()
-
