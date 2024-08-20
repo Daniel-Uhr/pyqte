@@ -12,32 +12,6 @@ pandas2ri.activate()
 qte = importr('qte')
 
 class QDiDEstimator:
-    """
-    O QDiDEstimator é utilizado para estimar os efeitos Quantile Difference-in-Differences (QDiD)
-    utilizando o pacote 'qte' do R via rpy2.
-    
-    Atributos:
-    ----------
-    formula : str
-        A fórmula representando a relação entre as variáveis dependentes e independentes.
-    data : pandas.DataFrame
-        O dataset contendo as variáveis usadas na fórmula.
-    t : int
-        O período de tempo após o tratamento.
-    tmin1 : int
-        O período de tempo antes do tratamento.
-    idname : str
-        O nome da coluna representando o identificador único de cada unidade.
-    tname : str
-        O nome da coluna representando os períodos de tempo.
-    probs : list
-        A lista de quantis nos quais estimar o efeito do tratamento.
-    se : bool
-        Se deve ou não calcular os erros padrão.
-    iters : int
-        O número de iterações bootstrap para calcular os erros padrão.
-    """
-    
     def __init__(self, formula, data, t, tmin1, idname, tname, probs=[0.05, 0.5, 0.95], se=True, iters=100):
         self.formula = formula
         self.data = data
@@ -64,10 +38,13 @@ class QDiDEstimator:
         # Preparar a fórmula para R
         r_formula = Formula(self.formula)
 
+        # Criando a sequência de probabilidades para os quantis em formato R
+        r_probs = ro.FloatVector(self.probs)
+
         # Chama a função QDiD do pacote qte do R
         qdid_result = qte.QDiD(r_formula, data=r_data, t=self.t, tmin1=self.tmin1,
-                               idname=self.idname, tname=self.tname, probs=ro.FloatVector(self.probs),
-                               se=self.se, iters=self.iters)
+                               idname=self.idname, tname=self.tname, probs=r_probs,
+                               se=self.se, iters=self.iters, panel=True)
 
         # Extrair os resultados em um dicionário
         results = {
