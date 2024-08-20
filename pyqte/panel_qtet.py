@@ -2,6 +2,7 @@ from rpy2.robjects import r, Formula
 from rpy2.robjects.packages import importr
 from rpy2.robjects import pandas2ri
 import numpy as np
+import matplotlib.pyplot as plt
 
 # Ativar a conversão pandas para R DataFrame
 pandas2ri.activate()
