@@ -120,11 +120,7 @@ class CiCEstimator:
         plt.show()
 
     def get_results(self):
-        """Retorna um dicionário com todas as informações da estimativa."""
-        return self.info
-
-    def get_results_dataframe(self):
-        """Cria um DataFrame pandas com os resultados estimados, útil para criação de tabelas ou gráficos personalizados."""
+        """Cria um DataFrame pandas com os resultados estimados."""
         df = pd.DataFrame({
             'Quantile': self.info['probs'],
             'QTE': self.info['qte']
