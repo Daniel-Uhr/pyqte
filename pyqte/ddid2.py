@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from rpy2.robjects import Formula
+from rpy2.robjects import r, Formula
 from rpy2.robjects.packages import importr
 from rpy2.robjects import pandas2ri
 from rpy2.robjects.conversion import localconverter
@@ -84,7 +84,7 @@ class DDID2Estimator:
     def summary(self):
         if self.result is None:
             raise ValueError("Model has not been fitted yet. Call `fit()` before calling `summary()`.")
-        summary = ro.r.summary(self.result)
+        summary = r.summary(self.result)
         print(summary)
         return summary
 
@@ -140,4 +140,3 @@ class DDID2Estimator:
         })
 
         return results_df
-
