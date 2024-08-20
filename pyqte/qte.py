@@ -26,20 +26,10 @@ class QTEEstimator:
         The dataset containing the variables specified in the formula.
     probs : list of float
         A list of quantiles at which to estimate the treatment effect.
-    t : int
-        The treatment time period.
-    tmin1 : int
-        The pre-treatment time period.
-    idname : str
-        The name of the identifier variable for the panel data.
-    tname : str
-        The name of the time variable in the dataset.
     se : bool, optional
         Whether to compute standard errors (default is False).
     iters : int, optional
         Number of iterations for bootstrap standard errors (default is 100).
-    panel : bool, optional
-        Whether the data is panel data (default is False).
 
     Methods:
     --------
@@ -51,18 +41,13 @@ class QTEEstimator:
         Generates a plot of the QTE results.
     """
 
-    def __init__(self, formula, xformla, data, probs, t, tmin1, idname, tname, se=False, iters=100, panel=False):
+    def __init__(self, formula, xformla, data, probs, se=False, iters=100):
         self.formula = formula
         self.xformla = xformla
         self.data = data
         self.probs = probs
-        self.t = t
-        self.tmin1 = tmin1
-        self.idname = idname
-        self.tname = tname
         self.se = se
         self.iters = iters
-        self.panel = panel
 
     def fit(self):
         """
@@ -72,19 +57,14 @@ class QTEEstimator:
         with localconverter(ro.default_converter + pandas2ri.converter):
             r_data = ro.conversion.py2rpy(self.data)
 
-        # Call the qte function from the R qte package
+        # Chama a função ci_qte do pacote R qte
         result = qte.ci_qte(
             formla=ro.Formula(self.formula),
             xformla=ro.Formula(self.xformla),
             data=r_data,
             probs=ro.FloatVector(self.probs),
-            t=self.t,
-            tmin1=self.tmin1,
-            idname=self.idname,
-            tname=self.tname,
             se=self.se,
-            iters=self.iters,
-            panel=self.panel
+            iters=self.iters
         )
 
         self.result = result
