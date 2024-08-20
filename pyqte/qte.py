@@ -25,6 +25,7 @@ class QTEEstimator:
             
         self.se = se
         self.iters = iters
+        self.info = {}
 
     def fit(self):
         with localconverter(ro.default_converter + pandas2ri.converter):
@@ -50,6 +51,18 @@ class QTEEstimator:
             )
 
         self.result = result
+        self._extract_info()
+
+    def _extract_info(self):
+        self.info['qte'] = np.array(self.result.rx2('qte'))
+        self.info['probs'] = np.array(self.probs)
+        
+        if self.se:
+            self.info['qte.lower'] = np.array(self.result.rx2('qte.lower'))
+            self.info['qte.upper'] = np.array(self.result.rx2('qte.upper'))
+        else:
+            self.info['qte.lower'] = None
+            self.info['qte.upper'] = None
 
     def summary(self):
         summary = ro.r.summary(self.result)
@@ -57,27 +70,17 @@ class QTEEstimator:
         return summary
 
     def plot(self):
-        tau = np.array(self.probs)
-        qte = np.array(self.result.rx2('qte'))
+        tau = self.info['probs']
+        qte = self.info['qte']
 
         # Verificar se se=True para plotar com intervalos de confiança
-        if self.se:
-            # Verificar se os intervalos de confiança existem e são numéricos
-            if 'qte.lower' in self.result.names and 'qte.upper' in self.result.names:
-                lower_bound = np.array(self.result.rx2('qte.lower'))
-                upper_bound = np.array(self.result.rx2('qte.upper'))
+        if self.se and self.info['qte.lower'] is not None and self.info['qte.upper'] is not None:
+            lower_bound = self.info['qte.lower']
+            upper_bound = self.info['qte.upper']
 
-                # Verificar se os valores de lower_bound e upper_bound são válidos para plotagem
-                if np.issubdtype(lower_bound.dtype, np.number) and np.issubdtype(upper_bound.dtype, np.number):
-                    plt.figure(figsize=(10, 6))
-                    plt.plot(tau, qte, 'o-', label="QTE")
-                    plt.fill_between(tau, lower_bound, upper_bound, color='gray', alpha=0.2, label="95% CI")
-                else:
-                    print("Intervalos de confiança contêm valores não numéricos. Plotagem omitida.")
-            else:
-                print("Intervalos de confiança não estão disponíveis. Plotando apenas os valores de QTE.")
-                plt.figure(figsize=(10, 6))
-                plt.plot(tau, qte, 'o-', label="QTE")
+            plt.figure(figsize=(10, 6))
+            plt.plot(tau, qte, 'o-', label="QTE")
+            plt.fill_between(tau, lower_bound, upper_bound, color='gray', alpha=0.2, label="95% CI")
         else:
             # Se se=False, plotar apenas os pontos sem intervalos de confiança
             plt.figure(figsize=(10, 6))
@@ -91,4 +94,15 @@ class QTEEstimator:
         plt.grid(True)
         plt.show()
 
-
+    def get_results_dataframe(self):
+        """Cria um DataFrame pandas com os resultados estimados, útil para criação de tabelas ou gráficos personalizados."""
+        df = pd.DataFrame({
+            'Quantile': self.info['probs'],
+            'QTE': self.info['qte']
+        })
+        
+        if self.se and self.info['qte.lower'] is not None and self.info['qte.upper'] is not None:
+            df['QTE Lower Bound'] = self.info['qte.lower']
+            df['QTE Upper Bound'] = self.info['qte.upper']
+        
+        return df
