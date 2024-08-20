@@ -4,6 +4,7 @@ import rpy2.robjects as ro
 from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 from rpy2.robjects import Formula
+import matplotlib.pyplot as plt
 
 # Ativando a conversão automática de pandas DataFrames para R data.frames
 pandas2ri.activate()
@@ -15,15 +16,16 @@ class QTETEstimator:
     def __init__(self, formula, data, probs=None, se=True, iters=100, xformla=None):
         self.formula = formula
         self.data = data
-        self.probs = probs if probs is not None else np.arange(0.05, 1, 0.05)
+        # Se probs for uma lista de três elementos, interprete como início, fim, incremento
+        if probs and len(probs) == 3:
+            self.probs = np.arange(probs[0], probs[1] + probs[2], probs[2])
+        else:
+            self.probs = probs if probs is not None else np.arange(0.05, 1, 0.05)
         self.se = se
         self.iters = iters
         self.xformla = xformla
 
     def estimate(self):
-        """
-        Estima o QTET.
-        """
         r_formula = Formula(self.formula)
         r_data = pandas2ri.py2rpy(self.data)
 
@@ -48,22 +50,16 @@ class QTETEstimator:
         return result
 
     def summary(self):
-        """
-        Exibe o sumário dos resultados estimados.
-        """
         result = self.estimate()
         summary = ro.r.summary(result)
         print(summary)
         return summary
 
     def plot(self):
-        """
-        Plota os resultados estimados.
-        """
         result = self.estimate()
 
         # Extraindo os dados do resultado
-        tau = np.linspace(0.05, 0.95, len(result.rx2('qte')))
+        tau = np.linspace(self.probs[0], self.probs[-1], len(result.rx2('qte')))
         qte = np.array(result.rx2('qte'))
         lower_bound = np.array(result.rx2('qte.lower'))
         upper_bound = np.array(result.rx2('qte.upper'))
