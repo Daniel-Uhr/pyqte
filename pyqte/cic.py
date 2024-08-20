@@ -4,112 +4,99 @@ import rpy2.robjects as ro
 from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 from rpy2.robjects import Formula
+import matplotlib.pyplot as plt
 
-# Activate the automatic conversion of pandas DataFrames to R data.frames
+# Ativar a conversão automática de pandas DataFrames para R data.frames
 pandas2ri.activate()
 
-# Import the qte package from R
+# Importar o pacote qte do R
 qte = importr('qte')
 
 class CiCEstimator:
-    """
-    CiCEstimator is used to estimate Changes-in-Changes (CiC) effects using the R 'qte' package via rpy2.
-    
-    Attributes:
-    -----------
-    formula : str
-        The formula representing the relationship between the dependent and independent variables.
-    data : pandas.DataFrame
-        The dataset containing the variables used in the formula.
-    t : int
-        The time period after treatment.
-    tmin1 : int
-        The time period before treatment.
-    idname : str
-        The name of the column representing the unique identifier for each unit.
-    tname : str
-        The name of the column representing the time periods.
-    probs : list
-        The list of quantiles at which to estimate the treatment effect.
-    se : bool
-        Whether to compute standard errors.
-    iters : int
-        The number of bootstrap iterations to compute standard errors.
-    """
-    
-    def __init__(self, formula, data, t, tmin1, idname, tname, probs=[0.05, 0.5, 0.95], se=True, iters=100):
+    def __init__(self, formula, data, t, tmin1, tname, idname=None, xformla=None, probs=[0.05, 0.95, 0.05], se=True, iters=100, alp=0.05, panel=False, pl=False, cores=2, retEachIter=False):
         self.formula = formula
         self.data = data
         self.t = t
         self.tmin1 = tmin1
-        self.idname = idname
         self.tname = tname
-        self.probs = probs
+        self.idname = idname
+        self.xformla = xformla
+        
+        # Processar 'probs' como um vetor numérico em R
+        if isinstance(probs, list) and len(probs) == 3:
+            self.probs = ro.FloatVector(np.arange(probs[0], probs[1] + probs[2], probs[2]))
+        else:
+            self.probs = ro.FloatVector(probs)
+
         self.se = se
         self.iters = iters
+        self.alp = alp
+        self.panel = panel
+        self.pl = pl
+        self.cores = cores
+        self.retEachIter = retEachIter
 
-    def estimate(self):
-        """
-        Estimate the CiC effects.
+    def fit(self):
+        with pandas2ri.converter:
+            r_data = pandas2ri.py2rpy(self.data)
 
-        Returns:
-        --------
-        results : dict
-            A dictionary containing the estimated CiC effects and, if requested, the standard errors.
-        """
-        # Convert the pandas DataFrame to an R data.frame
-        r_data = pandas2ri.py2rpy(self.data)
-
-        # Prepare the formula for R
         r_formula = Formula(self.formula)
+        additional_args = {}
 
-        # Call the CiC function from the R 'qte' package
-        cic_result = qte.CiC(r_formula, data=r_data, t=self.t, tmin1=self.tmin1,
-                             idname=self.idname, tname=self.tname, probs=ro.FloatVector(self.probs),
-                             se=self.se, iters=self.iters)
+        if self.xformla:
+            additional_args['xformla'] = Formula(self.xformla)
 
-        # Extract the results into a dictionary
-        results = {
-            'cic': np.array(cic_result.rx2('QTE')),
-            'probs': self.probs
-        }
+        if self.idname:
+            additional_args['idname'] = self.idname
 
-        if self.se:
-            results['se'] = np.array(cic_result.rx2('Std.Error'))
+        if self.panel:
+            additional_args['panel'] = self.panel
 
-        return results
+        # Chama a função CiC do pacote qte do R
+        self.result = qte.CiC(
+            formla=r_formula,
+            t=self.t,
+            tmin1=self.tmin1,
+            tname=self.tname,
+            data=r_data,
+            probs=self.probs,
+            se=self.se,
+            iters=self.iters,
+            alp=self.alp,
+            pl=self.pl,
+            cores=self.cores,
+            retEachIter=self.retEachIter,
+            **additional_args
+        )
 
     def summary(self):
-        """
-        Provide a summary of the CiC estimation results.
-        
-        Returns:
-        --------
-        summary : str
-            A textual summary of the CiC results.
-        """
-        results = self.estimate()
-        summary_str = "Changes-in-Changes (CiC) Results:\n"
-        summary_str += "Quantiles: " + str(self.probs) + "\n"
-        summary_str += "CiC Estimates: " + str(results['cic']) + "\n"
-        
-        if self.se:
-            summary_str += "Standard Errors: " + str(results['se']) + "\n"
-        
-        return summary_str
+        summary = ro.r.summary(self.result)
+        print(summary)
+        return summary
 
     def plot(self):
         """
-        Plot the CiC estimates with confidence intervals if available.
+        Plota as estimativas do CiC com intervalos de confiança, se disponíveis.
         """
-        import matplotlib.pyplot as plt
+        tau = np.array(self.probs)
+        cic = np.array(self.result.rx2('QTE'))
 
-        results = self.estimate()
+        if self.se:
+            lower_bound = np.array(self.result.rx2('QTE.lower'))
+            upper_bound = np.array(self.result.rx2('QTE.upper'))
+            plt.figure(figsize=(10, 6))
+            plt.plot(tau, cic, 'o-', label="CiC")
+            plt.fill_between(tau, lower_bound, upper_bound, color='gray', alpha=0.2, label="95% CI")
+        else:
+            plt.figure(figsize=(10, 6))
+            plt.plot(tau, cic, 'o-', label="CiC")
         
-        plt.errorbar(self.probs, results['cic'], yerr=results.get('se', None), fmt='o', capsize=5)
+        plt.axhline(y=0, color='r', linestyle='--', label="No Effect Line")
         plt.xlabel('Quantiles')
         plt.ylabel('CiC Estimates')
         plt.title('Changes-in-Changes (CiC) Estimates')
+        plt.legend()
         plt.grid(True)
         plt.show()
+
 
