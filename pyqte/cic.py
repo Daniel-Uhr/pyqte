@@ -35,17 +35,17 @@ class CiCEstimator:
         self.pl = pl
         self.cores = cores
         self.retEachIter = retEachIter
-        self.result = None  # Armazenar o resultado da estimação
+        self.info = {}
 
     def fit(self):
         with localconverter(ro.default_converter + pandas2ri.converter):
             r_data = ro.conversion.py2rpy(self.data)
 
-        r_formula = ro.Formula(self.formula)
+        r_formula = Formula(self.formula)
         additional_args = {}
 
         if self.xformla:
-            additional_args['xformla'] = ro.Formula(self.xformla)
+            additional_args['xformla'] = Formula(self.xformla)
 
         if self.idname:
             additional_args['idname'] = self.idname
@@ -69,16 +69,18 @@ class CiCEstimator:
             retEachIter=self.retEachIter,
             **additional_args
         )
+        self._extract_info()
 
-        # Criar a variável com as informações
-        self.info = {
-            'qte': np.array(self.result.rx2('qte')),
-            'ate': np.array(self.result.rx2('ate')),
-            'probs': np.array(self.result.rx2('probs')),
-            'qte.se': np.array(self.result.rx2('qte.se')) if self.se else None,
-            'qte.lower': np.array(self.result.rx2('qte.lower')) if self.se else None,
-            'qte.upper': np.array(self.result.rx2('qte.upper')) if self.se else None,
-        }
+    def _extract_info(self):
+        self.info['qte'] = np.array(self.result.rx2('qte'))
+        self.info['probs'] = np.array(self.probs)
+        
+        if self.se:
+            self.info['qte.lower'] = np.array(self.result.rx2('qte.lower'))
+            self.info['qte.upper'] = np.array(self.result.rx2('qte.upper'))
+        else:
+            self.info['qte.lower'] = None
+            self.info['qte.upper'] = None
 
     def summary(self):
         summary = ro.r.summary(self.result)
@@ -86,27 +88,27 @@ class CiCEstimator:
         return summary
 
     def plot(self):
-        tau = np.array(self.result.rx2('probs'))
-        qte = np.array(self.result.rx2('qte'))
+        tau = self.info['probs']
+        cic = self.info['qte']
 
-        # Garantir que 'tau' e 'qte' tenham a mesma dimensão
-        if len(qte.shape) > 1:
-            qte = qte.flatten()
+        # Garantir que 'tau' e 'cic' tenham a mesma dimensão
+        if len(cic.shape) > 1:
+            cic = cic.flatten()
 
-        if len(tau) != len(qte):
-            tau = np.linspace(tau[0], tau[-1], len(qte))
+        if len(tau) != len(cic):
+            tau = np.linspace(tau[0], tau[-1], len(cic))
 
         # Verificar se se=True para plotar com intervalos de confiança
-        if self.se and self.info.get('qte.lower') is not None and self.info.get('qte.upper') is not None:
+        if self.se and self.info['qte.lower'] is not None and self.info['qte.upper'] is not None:
             lower_bound = self.info['qte.lower']
             upper_bound = self.info['qte.upper']
 
             plt.figure(figsize=(10, 6))
-            plt.plot(tau, qte, 'o-', label="CiC")
+            plt.plot(tau, cic, 'o-', label="CiC")
             plt.fill_between(tau, lower_bound, upper_bound, color='gray', alpha=0.2, label="95% CI")
         else:
             plt.figure(figsize=(10, 6))
-            plt.plot(tau, qte, 'o-', label="CiC")
+            plt.plot(tau, cic, 'o-', label="CiC")
         
         plt.axhline(y=0, color='r', linestyle='--', label="No Effect Line")
         plt.xlabel('Quantiles')
@@ -115,4 +117,17 @@ class CiCEstimator:
         plt.legend()
         plt.grid(True)
         plt.show()
+
+    def get_results_dataframe(self):
+        """Cria um DataFrame pandas com os resultados estimados, útil para criação de tabelas ou gráficos personalizados."""
+        df = pd.DataFrame({
+            'Quantile': self.info['probs'],
+            'QTE': self.info['qte']
+        })
+        
+        if self.se and self.info['qte.lower'] is not None and self.info['qte.upper'] is not None:
+            df['QTE Lower Bound'] = self.info['qte.lower']
+            df['QTE Upper Bound'] = self.info['qte.upper']
+        
+        return df
 
