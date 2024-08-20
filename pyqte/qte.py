@@ -23,7 +23,7 @@ class QTEEstimator:
         else:
             self.probs = ro.FloatVector(probs)
             
-        self.se = se
+        self.se = True
         self.iters = iters
 
     def fit(self):
