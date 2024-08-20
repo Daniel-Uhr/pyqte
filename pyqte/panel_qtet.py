@@ -1,47 +1,17 @@
-import pandas as pd
-import numpy as np
-import rpy2.robjects as ro
-from rpy2.robjects import pandas2ri
+from rpy2.robjects import r, Formula
 from rpy2.robjects.packages import importr
-from rpy2.robjects.conversion import localconverter
-from rpy2.robjects import Formula
-import matplotlib.pyplot as plt
+from rpy2.robjects import pandas2ri
 
-# Ativando a conversão automática de pandas DataFrames para R data.frames
+# Ativar a conversão automática de pandas DataFrame para R DataFrame
 pandas2ri.activate()
 
-# Importando o pacote qte do R
+# Importar o pacote qte do R
 qte = importr('qte')
 
 class PanelQTETEstimator:
     """
-    PanelQTETEstimator é utilizado para estimar o Quantile Treatment Effect on the Treated (QTET)
+    PanelQTETEstimator estima o Efeito Quantílico do Tratamento sobre os Tratados (QTET)
     utilizando dados em painel com o pacote 'qte' do R via rpy2.
-
-    Parâmetros:
-    -----------
-    formula : str
-        A fórmula representando o relacionamento entre as variáveis dependentes e independentes.
-    data : pandas.DataFrame
-        O conjunto de dados contendo as variáveis usadas na fórmula.
-    t : int
-        O terceiro período de tempo na amostra onde as unidades tratadas recebem o tratamento.
-    tmin1 : int
-        O segundo período de tempo na amostra, que deve ser um período pré-tratamento.
-    tmin2 : int
-        O primeiro período de tempo na amostra, que deve ser um período pré-tratamento.
-    idname : str
-        O nome da coluna que representa o identificador único para cada unidade.
-    tname : str
-        O nome da coluna que representa os períodos de tempo.
-    probs : list
-        Um vetor de valores entre 0 e 1 para calcular o QTET.
-    se : bool
-        Se deve calcular os erros padrão.
-    iters : int
-        O número de iterações bootstrap para calcular os erros padrão.
-    method : str
-        O método para incluir covariáveis, "QR" para regressão quantílica ou "pscore" para escore de propensão.
     """
 
     def __init__(self, formula, data, t, tmin1, tmin2, idname, tname, probs, se=False, iters=100, method="pscore"):
@@ -52,53 +22,42 @@ class PanelQTETEstimator:
         self.tmin2 = tmin2
         self.idname = idname
         self.tname = tname
-        # Se probs for uma lista de três elementos, interpretá-la como uma sequência
-        if isinstance(probs, list) and len(probs) == 3:
-            self.probs = ro.FloatVector(np.arange(probs[0], probs[1] + probs[2], probs[2]))
-        else:
-            self.probs = ro.FloatVector(probs)  # Usar probs como está
+        self.probs = probs
         self.se = se
         self.iters = iters
         self.method = method
+        self.result = None  # Para armazenar os resultados da estimativa
 
-    def estimate(self):
+    def fit(self):
         """
-        Estima o QTET usando dados em painel.
-
-        Retorna:
-        --------
-        result : objeto R
-            O resultado da estimativa QTET, que pode ser processado ou resumido.
+        Estimar o QTET para os quantis especificados.
         """
-        result = qte.panel_qtet(
-            formla=self.formula, 
-            t=self.t, 
-            tmin1=self.tmin1, 
+        # Chamando a função 'panel_qtet' do pacote qte do R
+        self.result = qte.panel_qtet(
+            formla=self.formula,
+            t=self.t,
+            tmin1=self.tmin1,
             tmin2=self.tmin2,
-            idname=self.idname, 
-            tname=self.tname, 
+            idname=self.idname,
+            tname=self.tname,
             data=self.data,
-            probs=self.probs, 
-            se=self.se, 
-            iters=self.iters, 
+            probs=self.probs,
+            se=self.se,
+            iters=self.iters,
             method=self.method
         )
-        self.result = result
-        return result
+        return self.result
 
     def summary(self):
         """
-        Exibe um resumo dos resultados da estimativa QTET.
-
-        Retorna:
-        --------
-        summary : str
-            Um resumo dos resultados QTET.
+        Exibir um sumário dos resultados da estimativa QTET.
         """
-        summary = ro.r.summary(self.result)
+        if self.result is None:
+            raise ValueError("O modelo não foi ajustado. Por favor, execute o método 'fit()' primeiro.")
+        summary = r['summary'](self.result)
         print(summary)
         return summary
-    
+     
     def plot(self):
         """
         Plota os resultados da estimativa QTET.
