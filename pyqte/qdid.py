@@ -68,29 +68,30 @@ class QDiDEstimator:
         """
         Plota as estimativas do QDiD com intervalos de confiança, se disponíveis.
         """
-        # Estimando os resultados
-        results = self.estimate()
-        
-        # Extraindo os dados necessários para o gráfico e convertendo para arrays NumPy
-        tau = np.array(results.rx2('probs'))
-        qte = np.array(results.rx2('qdid'))
-        
-        # Verificando se o erro padrão está disponível, assumindo zero se for nulo
-        if 'se' in results.names:
-            std_error = np.array(results.rx2('se'))
-            std_error = np.where(std_error == ro.rinterface.NULL, 0, std_error)
-        else:
-            std_error = np.zeros_like(qte)
+        summary = self.summary()
+
+        # Extraindo os dados do summary
+        lines = summary.splitlines()
+        tau = []
+        qte = []
+        std_error = []
+
+        for line in lines[3:]:
+            if line.strip():  # Ignorar linhas em branco
+                parts = line.split()
+                tau.append(float(parts[0]))
+                qte.append(float(parts[1]))
+                std_error.append(float(parts[2]))
 
         # Construindo o intervalo de confiança
-        lower_bound = qte - 1.96 * std_error
-        upper_bound = qte + 1.96 * std_error
+        lower_bound = np.array(qte) - 1.96 * np.array(std_error)
+        upper_bound = np.array(qte) + 1.96 * np.array(std_error)
 
         # Criar o gráfico
         plt.figure(figsize=(10, 6))
         plt.plot(tau, qte, 'o-', label="QTE")
         plt.fill_between(tau, lower_bound, upper_bound, color='gray', alpha=0.2, label="95% CI")
-        
+
         plt.axhline(y=0, color='r', linestyle='--', label="No Effect Line")
         plt.xlabel('Quantiles')
         plt.ylabel('QTE Estimates')
@@ -98,4 +99,3 @@ class QDiDEstimator:
         plt.legend()
         plt.grid(True)
         plt.show()
-
