@@ -74,7 +74,13 @@ class QDiDEstimator:
         # Extraindo os dados necessários para o gráfico
         tau = np.array(results.rx2('probs'))
         qte = np.array(results.rx2('qdid'))
-        std_error = np.array(results.rx2('se'))
+
+        # Verificando se o erro padrão está disponível, assumindo zero se for nulo
+        if 'se' in results.names:
+            std_error = np.array(results.rx2('se'))
+            std_error = np.where(std_error == None, 0, std_error)  # Assumir zero se for nulo
+        else:
+            std_error = np.zeros_like(qte)
 
         # Construindo o intervalo de confiança
         lower_bound = qte - 1.96 * std_error
@@ -92,4 +98,3 @@ class QDiDEstimator:
         plt.legend()
         plt.grid(True)
         plt.show()
-
