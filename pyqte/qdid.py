@@ -21,11 +21,25 @@ class QDiDEstimator:
         self.tmin1 = tmin1
         self.idname = idname
         self.tname = tname
-        self.probs = r.seq(probs[0], probs[1], probs[2]) if isinstance(probs, list) else probs
+        
+        # Se probs for uma lista de três elementos, interpretá-la como uma sequência R
+        if isinstance(probs, list) and len(probs) == 3:
+            self.probs = r.seq(probs[0], probs[1], probs[2])
+        else:
+            self.probs = probs  # caso contrário, use como está
+
         self.se = se
         self.iters = iters
 
     def estimate(self):
+        """
+        Estima os efeitos do QDiD.
+
+        Retorna:
+        --------
+        results : dict
+            Um dicionário contendo os efeitos estimados do QDiD e, se solicitado, os erros padrão.
+        """
         # Preparar a fórmula para R
         r_formula = Formula(self.formula)
 
@@ -37,20 +51,29 @@ class QDiDEstimator:
         return qdid_result
 
     def summary(self):
+        """
+        Fornece um resumo dos resultados de estimativa QDiD.
+        
+        Retorna:
+        --------
+        summary : str
+            Um resumo textual dos resultados do QDiD.
+        """
         qdid_result = self.estimate()
         summary = r.summary(qdid_result)
         print(summary)
+        return summary
 
-   def plot(self):
+    def plot(self):
         """
         Plota as estimativas do QDiD com intervalos de confiança, se disponíveis.
         """
-        results = self.estimate()
+        qdid_result = self.estimate()
 
         # Extrair os quantis, QTEs e erros padrão
         quantiles = np.array(self.probs)
-        qte_estimates = np.array(results.rx2('QTE'))
-        std_errors = np.array(results.rx2('Std.Error'))
+        qte_estimates = np.array(qdid_result.rx2('QTE'))
+        std_errors = np.array(qdid_result.rx2('Std.Error'))
 
         # Criar o gráfico
         plt.figure(figsize=(10, 6))
@@ -62,3 +85,4 @@ class QDiDEstimator:
         plt.grid(True)
         plt.legend()
         plt.show()
+
