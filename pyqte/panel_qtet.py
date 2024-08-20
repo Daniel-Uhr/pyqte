@@ -20,14 +20,7 @@ class PanelQTETEstimator:
         self.tmin2 = tmin2
         self.idname = idname
         self.tname = tname
-        self.se = se
-        self.iters = iters
-        self.method = method
-        self.alp = alp
-        self.retEachIter = retEachIter
-        self.pl = pl
-        self.cores = cores
-
+        
         # Processar 'probs' como um vetor numérico em R
         if probs is None:
             self.probs = r.seq(0.05, 0.95, by=0.05)
@@ -36,8 +29,20 @@ class PanelQTETEstimator:
                 self.probs = r.seq(probs[0], probs[1], by=probs[2])
             else:
                 self.probs = r.FloatVector(probs)
+        
+        self.se = se
+        self.iters = iters
+        self.method = method
+        self.alp = alp
+        self.retEachIter = retEachIter
+        self.pl = pl
+        self.cores = cores
 
     def fit(self):
+        # Certificar-se de que todos os argumentos necessários estão definidos
+        if self.formula is None or self.data is None or self.t is None or self.tmin1 is None or self.tmin2 is None or self.idname is None or self.tname is None:
+            raise ValueError("Todos os parâmetros obrigatórios devem ser fornecidos e não devem ser None.")
+        
         self.result = qte.panel_qtet(
             formla=self.formula,
             t=self.t,
@@ -101,4 +106,3 @@ class PanelQTETEstimator:
             'QTET Upper Bound': np.array(self.result.rx2('qte.upper')) if 'qte.upper' in self.result.names else None,
         }
         return pd.DataFrame(data)
-
