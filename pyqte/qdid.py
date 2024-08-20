@@ -73,9 +73,10 @@ class QDiDEstimator:
         # Estimando os resultados
         results = self.estimate()
         
-        quantiles = results['probs']
-        qte_estimates = results['qdid']
-        std_errors = results.get('se', None)
+        # Extraindo os quantis, estimativas QTE e erros padrão do objeto de resultados
+        quantiles = np.array(results.rx2('probs'))
+        qte_estimates = np.array(results.rx2('qdid'))
+        std_errors = np.array(results.rx2('se')) if 'se' in results.names else None
         
         # Verificando os tamanhos das listas
         print("Tamanhos das listas:")
