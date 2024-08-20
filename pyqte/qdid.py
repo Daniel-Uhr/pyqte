@@ -75,14 +75,17 @@ class QDiDEstimator:
         qte_estimates = np.array(qdid_result.rx2('QTE'))
         std_errors = np.array(qdid_result.rx2('Std.Error'))
 
-        # Criar o gráfico
-        plt.figure(figsize=(10, 6))
-        plt.errorbar(quantiles, qte_estimates, yerr=std_errors, fmt='o', capsize=5, label="QTE with Std. Error")
-        plt.axhline(y=0, color='r', linestyle='--', label="No Effect Line")
-        plt.xlabel('Quantiles')
-        plt.ylabel('Quantile Treatment Effect (QTE)')
-        plt.title('Quantile Difference-in-Differences (QDiD) Estimates')
-        plt.grid(True)
-        plt.legend()
-        plt.show()
-
+        # Verificar se os tamanhos das variáveis são iguais
+        if len(quantiles) == len(qte_estimates) == len(std_errors):
+            # Criar o gráfico
+            plt.figure(figsize=(10, 6))
+            plt.errorbar(quantiles, qte_estimates, yerr=std_errors, fmt='o', capsize=5, label="QTE with Std. Error")
+            plt.axhline(y=0, color='r', linestyle='--', label="No Effect Line")
+            plt.xlabel('Quantiles')
+            plt.ylabel('Quantile Treatment Effect (QTE)')
+            plt.title('Quantile Difference-in-Differences (QDiD) Estimates')
+            plt.grid(True)
+            plt.legend()
+            plt.show()
+        else:
+            print(f"Tamanhos incompatíveis: quantiles={len(quantiles)}, QTE={len(qte_estimates)}, Std.Error={len(std_errors)}")
