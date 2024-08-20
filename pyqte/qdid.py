@@ -80,10 +80,10 @@ class QDiDEstimator:
         
         # Verificando os tamanhos das listas
         print("Tamanhos das listas:")
-        print(f"Tamanho de quantiles: {len(quantiles)}")
-        print(f"Tamanho de qte_estimates: {len(qte_estimates)}")
+        print(f"Tamanho de quantiles: {quantiles.size}")
+        print(f"Tamanho de qte_estimates: {qte_estimates.size}")
         if std_errors is not None:
-            print(f"Tamanho de std_errors: {len(std_errors)}")
+            print(f"Tamanho de std_errors: {std_errors.size}")
         
         # Criar o gráfico
         plt.figure(figsize=(10, 6))
@@ -99,3 +99,4 @@ class QDiDEstimator:
         plt.legend()
         plt.grid(True)
         plt.show()
+
