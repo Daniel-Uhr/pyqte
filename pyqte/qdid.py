@@ -1,6 +1,8 @@
+import pandas as pd
+import numpy as np
 import rpy2.robjects as ro
-from rpy2.robjects.packages import importr
 from rpy2.robjects import pandas2ri
+from rpy2.robjects.packages import importr
 from rpy2.robjects import Formula
 
 # Ativando a conversão automática de pandas DataFrames para R data.frames
@@ -13,12 +15,11 @@ r = ro.r  # Acessando o ambiente R diretamente
 class QDiDEstimator:
     def __init__(self, formula, data, t, tmin1, idname, tname, probs=None, se=True, iters=100):
         self.formula = formula
-        self.data = pandas2ri.py2rpy(data)  # Converte os dados para R na inicialização
+        self.data = pandas2ri.py2rpy(data[data[tname].isin([tmin1, t])])  # Filtrando os dados
         self.t = t
         self.tmin1 = tmin1
         self.idname = idname
         self.tname = tname
-        # Criar a sequência de probabilidades no estilo R
         self.probs = r.seq(probs[0], probs[1], probs[2]) if isinstance(probs, list) else probs
         self.se = se
         self.iters = iters
@@ -38,3 +39,4 @@ class QDiDEstimator:
         qdid_result = self.estimate()
         summary = r.summary(qdid_result)
         print(summary)
+
