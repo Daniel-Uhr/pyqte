@@ -25,9 +25,9 @@ class CiCEstimator:
         
         # Processar 'probs' como um vetor numérico em R
         if isinstance(probs, list) and len(probs) == 3:
-            self.probs = ro.FloatVector(np.arange(probs[0], probs[1] + probs[2], probs[2]))
+            self.probs = np.arange(probs[0], probs[1] + probs[2], probs[2])
         else:
-            self.probs = ro.FloatVector(probs)
+            self.probs = probs
 
         self.se = se
         self.iters = iters
@@ -60,7 +60,7 @@ class CiCEstimator:
             tmin1=self.tmin1,
             tname=self.tname,
             data=r_data,
-            probs=self.probs,
+            probs=ro.FloatVector(self.probs),
             se=self.se,
             iters=self.iters,
             alp=self.alp,
@@ -82,15 +82,10 @@ class CiCEstimator:
         tau = np.array(self.probs)
         cic = np.array(self.result.rx2('QTE'))
 
-        # Ajuste para garantir que os dados sejam plotáveis
-        if len(tau) == 1:
-            tau = np.linspace(tau[0], tau[0] + 0.1, len(cic))
-
         # Verificar se tau e cic têm a mesma dimensão
         if len(tau) != len(cic):
             raise ValueError(f"tau and cic must have the same length, but have lengths {len(tau)} and {len(cic)}.")
 
-        # Verificar se se=True para plotar com intervalos de confiança
         if self.se:
             lower_bound = np.array(self.result.rx2('QTE.lower'))
             upper_bound = np.array(self.result.rx2('QTE.upper'))
@@ -111,4 +106,5 @@ class CiCEstimator:
         plt.legend()
         plt.grid(True)
         plt.show()
+
 
