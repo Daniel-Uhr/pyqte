@@ -69,10 +69,6 @@ class CiCEstimator:
             **additional_args
         )
 
-        # Imprimir o resultado para depuração
-        print("Conteúdo de self.result:", self.result)
-        print("Campos disponíveis em self.result:", self.result.names)
-
     def summary(self):
         summary = ro.r.summary(self.result)
         print(summary)
@@ -80,7 +76,7 @@ class CiCEstimator:
 
     def plot(self):
         tau = np.array(self.probs)
-        cic = np.array(self.result.rx2('QTE'))
+        cic = np.array(self.result.rx2('qte'))
 
         # Garantir que 'tau' e 'cic' tenham a mesma dimensão
         if len(cic.shape) > 1:
@@ -91,13 +87,22 @@ class CiCEstimator:
             tau = np.linspace(tau[0], tau[-1], len(cic))
 
         # Verificar se se=True para plotar com intervalos de confiança
-        if self.se:
-            lower_bound = np.array(self.result.rx2('QTE.lower')).flatten()
-            upper_bound = np.array(self.result.rx2('QTE.upper')).flatten()
+        if self.se and 'qte.lower' in self.result.names and 'qte.upper' in self.result.names:
+            lower_bound = self.result.rx2('qte.lower')
+            upper_bound = self.result.rx2('qte.upper')
 
-            plt.figure(figsize=(10, 6))
-            plt.plot(tau, cic, 'o-', label="CiC")
-            plt.fill_between(tau, lower_bound, upper_bound, color='gray', alpha=0.2, label="95% CI")
+            # Verificar se lower_bound e upper_bound são válidos
+            if lower_bound and upper_bound:
+                lower_bound = np.array(lower_bound).flatten()
+                upper_bound = np.array(upper_bound).flatten()
+
+                plt.figure(figsize=(10, 6))
+                plt.plot(tau, cic, 'o-', label="CiC")
+                plt.fill_between(tau, lower_bound, upper_bound, color='gray', alpha=0.2, label="95% CI")
+            else:
+                print("Intervalos de confiança não disponíveis. Plotando apenas os pontos de CiC.")
+                plt.figure(figsize=(10, 6))
+                plt.plot(tau, cic, 'o-', label="CiC")
         else:
             plt.figure(figsize=(10, 6))
             plt.plot(tau, cic, 'o-', label="CiC")
@@ -109,4 +114,5 @@ class CiCEstimator:
         plt.legend()
         plt.grid(True)
         plt.show()
+
 
