@@ -1,42 +1,46 @@
-from rpy2.robjects import r, Formula
-from rpy2.robjects.packages import importr
+import pandas as pd
+import numpy as np
+import rpy2.robjects as ro
 from rpy2.robjects import pandas2ri
+from rpy2.robjects.packages import importr
+from rpy2.robjects.conversion import localconverter
+import matplotlib.pyplot as plt
 
-# Activate the pandas conversion for rpy2
+# Ativando a conversão automática de pandas DataFrames para R data.frames
 pandas2ri.activate()
 
-# Import the R 'qte' package
+# Importando o pacote qte do R
 qte = importr('qte')
 
-class PanelQTET_Estimator:
+class PanelQTETEstimator:
     """
-    PanelQTET_Estimator is used to estimate the Quantile Treatment Effect on the Treated (QTET)
-    using panel data with the R 'qte' package via rpy2.
-    
-    Attributes:
+    PanelQTETEstimator é utilizado para estimar o Quantile Treatment Effect on the Treated (QTET)
+    utilizando dados em painel com o pacote 'qte' do R via rpy2.
+
+    Parâmetros:
     -----------
     formula : str
-        The formula representing the relationship between the dependent and independent variables.
+        A fórmula representando o relacionamento entre as variáveis dependentes e independentes.
     data : pandas.DataFrame
-        The dataset containing the variables used in the formula.
+        O conjunto de dados contendo as variáveis usadas na fórmula.
     t : int
-        The third time period in the sample where treated units receive treatment.
+        O terceiro período de tempo na amostra onde as unidades tratadas recebem o tratamento.
     tmin1 : int
-        The second time period in the sample, which should be a pre-treatment period.
+        O segundo período de tempo na amostra, que deve ser um período pré-tratamento.
     tmin2 : int
-        The first time period in the sample, which should be a pre-treatment period.
+        O primeiro período de tempo na amostra, que deve ser um período pré-tratamento.
     idname : str
-        The name of the column representing the unique identifier for each unit.
+        O nome da coluna que representa o identificador único para cada unidade.
     tname : str
-        The name of the column representing the time periods.
+        O nome da coluna que representa os períodos de tempo.
     probs : list
-        A vector of values between 0 and 1 to compute the QTET at.
+        Um vetor de valores entre 0 e 1 para calcular o QTET.
     se : bool
-        Whether to compute standard errors.
+        Se deve calcular os erros padrão.
     iters : int
-        The number of bootstrap iterations to compute standard errors.
+        O número de iterações bootstrap para calcular os erros padrão.
     method : str
-        The method for including covariates, either "QR" for quantile regression or "pscore" for propensity score.
+        O método para incluir covariáveis, "QR" para regressão quantílica ou "pscore" para escore de propensão.
     """
 
     def __init__(self, formula, data, t, tmin1, tmin2, idname, tname, probs, se=False, iters=100, method="pscore"):
@@ -47,44 +51,72 @@ class PanelQTET_Estimator:
         self.tmin2 = tmin2
         self.idname = idname
         self.tname = tname
-        self.probs = probs
+        # Se probs for uma lista de três elementos, interpretá-la como uma sequência
+        if isinstance(probs, list) and len(probs) == 3:
+            self.probs = ro.FloatVector(np.arange(probs[0], probs[1] + probs[2], probs[2]))
+        else:
+            self.probs = ro.FloatVector(probs)  # Usar probs como está
         self.se = se
         self.iters = iters
         self.method = method
 
     def estimate(self):
         """
-        Estimate the Quantile Treatment Effect on the Treated (QTET) using panel data.
+        Estima o QTET usando dados em painel.
 
-        Returns:
+        Retorna:
         --------
-        result : R object
-            The result of the Panel QTET estimation, which can be further processed or summarized.
+        result : objeto R
+            O resultado da estimativa QTET, que pode ser processado ou resumido.
         """
-        result = panel_qtet(self.formula, t=self.t, tmin1=self.tmin1, tmin2=self.tmin2,
-                                idname=self.idname, tname=self.tname, data=self.data,
-                                probs=self.probs, se=self.se, iters=self.iters, method=self.method)
+        result = qte.panel_qtet(
+            formla=self.formula, 
+            t=self.t, 
+            tmin1=self.tmin1, 
+            tmin2=self.tmin2,
+            idname=self.idname, 
+            tname=self.tname, 
+            data=self.data,
+            probs=self.probs, 
+            se=self.se, 
+            iters=self.iters, 
+            method=self.method
+        )
+        self.result = result
         return result
 
-    def summary(self, result):
+    def summary(self):
         """
-        Print a summary of the Panel QTET estimation result.
+        Exibe um resumo dos resultados da estimativa QTET.
 
-        Parameters:
-        -----------
-        result : R object
-            The result from the Panel QTET estimation to be summarized.
+        Retorna:
+        --------
+        summary : str
+            Um resumo dos resultados QTET.
         """
-        return r['summary'](result)
+        summary = ro.r.summary(self.result)
+        print(summary)
+        return summary
     
-    def plot(self, result):
+    def plot(self):
         """
-        Plot the Panel QTET estimation results.
+        Plota os resultados da estimativa QTET.
+        """
+        qte_results = self.result
 
-        Parameters:
-        -----------
-        result : R object
-            The result from the Panel QTET estimation to be plotted.
-        """
-        r['plot'](result)
+        tau = np.linspace(0.05, 0.95, len(qte_results.rx2('qte')))
+        qte = np.array(qte_results.rx2('qte'))
+        lower_bound = np.array(qte_results.rx2('qte.lower'))
+        upper_bound = np.array(qte_results.rx2('qte.upper'))
+
+        plt.figure(figsize=(10, 6))
+        plt.plot(tau, qte, 'o-', label="QTE")
+        plt.fill_between(tau, lower_bound, upper_bound, color='gray', alpha=0.2, label="95% CI")
+        plt.axhline(y=0, color='r', linestyle='--', label="No Effect Line")
+        plt.xlabel('Quantiles')
+        plt.ylabel('QTE Estimates')
+        plt.title('Quantile Treatment Effects (Panel QTET)')
+        plt.legend()
+        plt.grid(True)
+        plt.show()
 
