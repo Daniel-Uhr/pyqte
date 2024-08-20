@@ -25,33 +25,29 @@ class QDiDEstimator:
         self.se = se
         self.iters = iters
 
-    def estimate(self):
+    def fit(self):
         # Preparar a fórmula para R
         r_formula = Formula(self.formula)
 
         # Chama a função QDiD do pacote qte do R
-        qdid_result = qte.QDiD(r_formula, data=self.data, t=self.t, tmin1=self.tmin1,
+        self.result = qte.QDiD(r_formula, data=self.data, t=self.t, tmin1=self.tmin1,
                                idname=self.idname, tname=self.tname, probs=self.probs,
                                se=self.se, iters=self.iters, panel=True)
 
-        return qdid_result
-
     def summary(self):
-        qdid_result = self.estimate()
-        summary = r.summary(qdid_result)
+        summary = r.summary(self.result)
         print(summary)
+        return summary
 
     def plot(self):
         """
         Plota as estimativas do QDiD com intervalos de confiança, se disponíveis.
         """
-        qte_results = self.estimate()
-
-        # Extraindo os dados do qte_results
-        tau = np.linspace(0.05, 0.95, len(qte_results.rx2('qte')))
-        qte = np.array(qte_results.rx2('qte'))
-        lower_bound = np.array(qte_results.rx2('qte.lower'))
-        upper_bound = np.array(qte_results.rx2('qte.upper'))
+        # Extraindo os dados do resultado
+        tau = np.linspace(0.05, 0.95, len(self.result.rx2('qte')))
+        qte = np.array(self.result.rx2('qte'))
+        lower_bound = np.array(self.result.rx2('qte.lower'))
+        upper_bound = np.array(self.result.rx2('qte.upper'))
 
         # Criar o gráfico
         plt.figure(figsize=(10, 6))
