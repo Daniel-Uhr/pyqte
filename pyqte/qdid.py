@@ -41,39 +41,27 @@ class QDiDEstimator:
         summary = r.summary(qdid_result)
         print(summary)
 
-def plot(self, grayscale=False):
-    """
-    Plota as estimativas do QDiD com intervalos de confiança, se disponíveis.
-    
-    Parâmetros:
-    -----------
-    grayscale : bool, opcional (default: False)
-        Se True, o gráfico será gerado em tons de cinza.
-    """
-    qte_results = self.estimate()
+    def plot(self):
+        """
+        Plota as estimativas do QDiD com intervalos de confiança, se disponíveis.
+        """
+        qte_results = self.estimate()
 
-    # Extraindo os dados do qte_results
-    tau = np.linspace(0.05, 0.95, len(qte_results.rx2('qte')))
-    qte = np.array(qte_results.rx2('qte'))
-    lower_bound = np.array(qte_results.rx2('qte.lower'))
-    upper_bound = np.array(qte_results.rx2('qte.upper'))
+        # Extraindo os dados do qte_results
+        tau = np.linspace(0.05, 0.95, len(qte_results.rx2('qte')))
+        qte = np.array(qte_results.rx2('qte'))
+        lower_bound = np.array(qte_results.rx2('qte.lower'))
+        upper_bound = np.array(qte_results.rx2('qte.upper'))
 
-    # Criar o gráfico
-    plt.figure(figsize=(10, 6))
-    
-    if grayscale:
-        plt.plot(tau, qte, 'o-', color='black', label="QTE")
-        plt.fill_between(tau, lower_bound, upper_bound, color='lightgray', alpha=0.5, label="95% CI")
-        plt.axhline(y=0, color='gray', linestyle='--', label="No Effect Line")
-    else:
+        # Criar o gráfico
+        plt.figure(figsize=(10, 6))
         plt.plot(tau, qte, 'o-', label="QTE")
         plt.fill_between(tau, lower_bound, upper_bound, color='gray', alpha=0.2, label="95% CI")
-        plt.axhline(y=0, color='r', linestyle='--', label="No Effect Line")
-    
-    plt.xlabel('Quantiles')
-    plt.ylabel('QTE Estimates')
-    plt.title('Quantile Treatment Effects (QDiD)')
-    plt.legend()
-    plt.grid(True)
-    plt.show()
 
+        plt.axhline(y=0, color='r', linestyle='--', label="No Effect Line")
+        plt.xlabel('Quantiles')
+        plt.ylabel('QTE Estimates')
+        plt.title('Quantile Treatment Effects (QDiD)')
+        plt.legend()
+        plt.grid(True)
+        plt.show()
