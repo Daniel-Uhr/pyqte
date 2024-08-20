@@ -22,14 +22,13 @@ class DDID2Estimator:
         self.covariates = covariates if covariates else []
         self.result = None
 
-    def estimate(self, t, tmin1, tmin2, probs=None, se=True, iters=100, alp=0.05, method='logit', retEachIter=False, panel=True, cores=1):
+    def estimate(self, t, tmin1, probs=None, se=True, iters=100, alp=0.05, method='logit', retEachIter=False, panel=True, cores=1):
         r_formula = Formula(f"{self.outcome} ~ {self.treatment}")
         r_data = self.data
         
         additional_args = {
             't': t,
             'tmin1': tmin1,
-            'tmin2': tmin2,
             'tname': self.time_var,
             'idname': self.id_var,
             'probs': r.seq(0.05, 0.95, 0.05) if probs is None else ro.FloatVector(probs),
