@@ -3,7 +3,6 @@ import numpy as np
 import rpy2.robjects as ro
 from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
-from rpy2.robjects import Formula
 from rpy2.robjects.conversion import localconverter
 import matplotlib.pyplot as plt
 
@@ -41,11 +40,11 @@ class CiCEstimator:
         with localconverter(ro.default_converter + pandas2ri.converter):
             r_data = ro.conversion.py2rpy(self.data)
 
-        r_formula = Formula(self.formula)
+        r_formula = ro.Formula(self.formula)
         additional_args = {}
 
         if self.xformla:
-            additional_args['xformla'] = Formula(self.xformla)
+            additional_args['xformla'] = ro.Formula(self.xformla)
 
         if self.idname:
             additional_args['idname'] = self.idname
@@ -70,47 +69,31 @@ class CiCEstimator:
             **additional_args
         )
 
+        # Imprimir o resultado para depuração
+        print("Conteúdo de self.result:", self.result)
+        print("Campos disponíveis em self.result:", self.result.names)
+
     def summary(self):
         summary = ro.r.summary(self.result)
         print(summary)
         return summary
 
     def plot(self):
-        # Verificar se a chave 'QTE' existe na result
-        if 'QTE' not in self.result.names:
-            print("Erro: 'QTE' não encontrado em self.result. Verifique a função CiC.")
-            return
-
-        # Extrair e verificar os valores de 'QTE'
+        tau = np.array(self.probs)
         cic = np.array(self.result.rx2('QTE'))
-        if cic is None or cic.size == 0:
-            cic = np.zeros(len(self.probs))  # Substituir por zeros se for nulo
-        print(f"cic (QTE): {cic}, type: {type(cic)}, shape: {cic.shape}")
-
-        tau = self.probs
-        print(f"tau (probs): {tau}, type: {type(tau)}, length: {len(tau)}")
 
         # Garantir que 'tau' e 'cic' tenham a mesma dimensão
         if len(cic.shape) > 1:
             cic = cic.flatten()
 
+        # Verificar e ajustar as dimensões de 'tau' e 'cic'
         if len(tau) != len(cic):
-            print(f"Dimension mismatch detected: len(tau)={len(tau)}, len(cic)={len(cic)}")
             tau = np.linspace(tau[0], tau[-1], len(cic))
 
-        # Se se=True, verificar e imprimir os intervalos de confiança
+        # Verificar se se=True para plotar com intervalos de confiança
         if self.se:
             lower_bound = np.array(self.result.rx2('QTE.lower')).flatten()
             upper_bound = np.array(self.result.rx2('QTE.upper')).flatten()
-
-            # Substituir por zeros se forem nulos
-            if lower_bound is None or lower_bound.size == 0:
-                lower_bound = np.zeros(len(tau))
-            if upper_bound is None or upper_bound.size == 0:
-                upper_bound = np.zeros(len(tau))
-
-            print(f"lower_bound: {lower_bound}, shape: {lower_bound.shape}")
-            print(f"upper_bound: {upper_bound}, shape: {upper_bound.shape}")
 
             plt.figure(figsize=(10, 6))
             plt.plot(tau, cic, 'o-', label="CiC")
