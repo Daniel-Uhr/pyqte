@@ -4,10 +4,10 @@ from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 from rpy2.robjects.conversion import localconverter
 
-# Activate the automatic conversion of pandas DataFrame to R DataFrame
+# Ativando a conversão automática de pandas DataFrame para R DataFrame
 pandas2ri.activate()
 
-# Import the qte package from R
+# Importando o pacote qte do R
 qte = importr('qte')
 
 class QTEEstimator:
@@ -19,7 +19,9 @@ class QTEEstimator:
     Parameters:
     -----------
     formula : str
-        A string representing the model formula (e.g., 're ~ treat').
+        A string representing the model formula (e.g., 're78 ~ treat').
+    xformla : str
+        A string representing the covariates formula (e.g., '~ age + education').
     data : pandas.DataFrame
         The dataset containing the variables specified in the formula.
     probs : list of float
@@ -49,8 +51,9 @@ class QTEEstimator:
         Generates a plot of the QTE results.
     """
 
-    def __init__(self, formula, data, probs, t, tmin1, idname, tname, se=False, iters=100, panel=False):
+    def __init__(self, formula, xformla, data, probs, t, tmin1, idname, tname, se=False, iters=100, panel=False):
         self.formula = formula
+        self.xformla = xformla
         self.data = data
         self.probs = probs
         self.t = t
@@ -70,8 +73,9 @@ class QTEEstimator:
             r_data = ro.conversion.py2rpy(self.data)
 
         # Call the qte function from the R qte package
-        result = ci.qte(
-            formula=self.formula,
+        result = qte.ci_qte(
+            formla=ro.Formula(self.formula),
+            xformla=ro.Formula(self.xformla),
             data=r_data,
             probs=ro.FloatVector(self.probs),
             t=self.t,
@@ -96,3 +100,4 @@ class QTEEstimator:
         Generates a plot of the QTE results using the R plot function.
         """
         ro.r.plot(self.result)
+
