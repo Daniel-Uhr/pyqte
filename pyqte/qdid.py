@@ -1,9 +1,8 @@
 import pandas as pd
 import numpy as np
 import rpy2.robjects as ro
-from rpy2.robjects import pandas2ri
+from rpy2.robjects import pandas2ri, Formula, FloatVector
 from rpy2.robjects.packages import importr
-from rpy2.robjects import Formula
 import matplotlib.pyplot as plt
 
 # Ativando a conversão automática de pandas DataFrames para R data.frames
@@ -31,7 +30,7 @@ class QDiDEstimator:
         self.cores = cores
 
         # Processar 'probs' como um vetor numérico em R
-        self.probs = r.seq(0.05, 0.95, by=0.05) if probs is None else r.FloatVector(probs)
+        self.probs = r.seq(0.05, 0.95, by=0.05) if probs is None else FloatVector(probs)
 
     def fit(self):
         # Construir os argumentos da função, omitindo aqueles que são None
