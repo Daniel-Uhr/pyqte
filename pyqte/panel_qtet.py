@@ -5,10 +5,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
-# Ativar a conversão pandas para R DataFrame
+# Activate the conversion of pandas DataFrames to R DataFrame
 pandas2ri.activate()
 
-# Importar o pacote 'qte' do R
+# Import the 'qte' package from R
 qte = importr('qte')
 
 class PanelQTETEstimator:
@@ -22,7 +22,7 @@ class PanelQTETEstimator:
         self.tname = tname
         self.xformla = Formula(xformla) if xformla else None
         
-        # Processar 'probs' como um vetor numérico em R
+        # Process 'probs' as a numeric vector in R
         if probs is None:
             self.probs = r.seq(0.05, 0.95, by=0.05)
         else:
@@ -36,10 +36,11 @@ class PanelQTETEstimator:
         self.method = method
 
     def fit(self):
+        # Ensure all necessary parameters are provided
         if self.formula is None or self.data is None or self.t is None or self.tmin1 is None or self.tmin2 is None or self.idname is None or self.tname is None:
-            raise ValueError("Todos os parâmetros obrigatórios devem ser fornecidos e não devem ser None.")
+            raise ValueError("All required parameters must be provided and cannot be None.")
 
-        # Chamando a função 'panel_qtet' do pacote 'qte'
+        # Call the 'panel_qtet' function from the 'qte' package
         if self.xformla:
             self.result = qte.panel_qtet(
                 formla=self.formula,
@@ -78,7 +79,7 @@ class PanelQTETEstimator:
         
     def plot(self):
         """
-        Plota os resultados da estimativa QTET, substituindo valores inválidos por zero.
+        Plot the QTET estimation results, replacing invalid values with zero.
         """
         qte_results = self.result
 
@@ -87,7 +88,7 @@ class PanelQTETEstimator:
         lower_bound = np.array(qte_results.rx2('qte.lower')) if self.se else None
         upper_bound = np.array(qte_results.rx2('qte.upper')) if self.se else None
 
-        # Substituir valores inválidos (NaN) por zero
+        # Replace invalid values (NaN) with zero
         qte = np.nan_to_num(qte, nan=0.0)
         if self.se:
             lower_bound = np.nan_to_num(lower_bound, nan=0.0)
@@ -109,13 +110,17 @@ class PanelQTETEstimator:
 
     def get_results(self):
         """
-        Retorna os resultados como um DataFrame do pandas.
+        Return the results as a pandas DataFrame.
         """
-        results_df = pd.DataFrame({
+        results_data = {
             'Quantile': np.linspace(0.05, 0.95, len(self.result.rx2('qte'))),
-            'QTE': np.array(self.result.rx2('qte')),
-            'QTE Lower Bound': np.array(self.result.rx2('qte.lower')) if self.se else np.nan,
-            'QTE Upper Bound': np.array(self.result.rx2('qte.upper')) if self.se else np.nan
-        })
-        return results_df
+            'QTE': np.array(self.result.rx2('qte'))
+        }
+        
+        # Include confidence intervals only if standard errors were calculated
+        if self.se:
+            results_data['QTE Lower Bound'] = np.array(self.result.rx2('qte.lower'))
+            results_data['QTE Upper Bound'] = np.array(self.result.rx2('qte.upper'))
 
+        results_df = pd.DataFrame(results_data)
+        return results_df
