@@ -3,10 +3,11 @@ import numpy as np
 import rpy2.robjects as ro
 from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
+from rpy2.robjects import Formula
 from rpy2.robjects.conversion import localconverter
 import matplotlib.pyplot as plt
 
-# Activate the automatic conversion of pandas DataFrame to R DataFrame
+# Activate the automatic conversion of pandas DataFrames to R DataFrames
 pandas2ri.activate()
 
 # Import the qte package from R
@@ -18,7 +19,6 @@ class QTEEstimator:
         self.xformla = xformla
         self.data = data
 
-        # Handle the 'probs' parameter to create a sequence or use provided values
         if isinstance(probs, list) and len(probs) == 3:
             self.probs = ro.FloatVector(np.arange(probs[0], probs[1] + probs[2], probs[2]))
         else:
@@ -29,13 +29,12 @@ class QTEEstimator:
         self.info = {}
 
     def fit(self):
-        # Convert the pandas DataFrame to R data.frame
         with localconverter(ro.default_converter + pandas2ri.converter):
             r_data = ro.conversion.py2rpy(self.data)
 
-        # Call the qte function from the R qte package
+        # Call the ci_qte function from the R qte package
         if self.xformla is not None:
-            result = qte.ci_qte(
+            self.result = qte.ci_qte(
                 formla=ro.Formula(self.formula),
                 xformla=ro.Formula(self.xformla),
                 data=r_data,
@@ -44,7 +43,7 @@ class QTEEstimator:
                 iters=self.iters
             )
         else:
-            result = qte.ci_qte(
+            self.result = qte.ci_qte(
                 formla=ro.Formula(self.formula),
                 data=r_data,
                 probs=self.probs,
@@ -52,11 +51,10 @@ class QTEEstimator:
                 iters=self.iters
             )
 
-        self.result = result
         self._extract_info()
 
     def _extract_info(self):
-        # Extract results from the fitted model
+        """Extract information from the R result object."""
         self.info['qte'] = np.array(self.result.rx2('qte'))
         self.info['probs'] = np.array(self.probs)
         
@@ -68,13 +66,13 @@ class QTEEstimator:
             self.info['qte.upper'] = None
 
     def summary(self):
-        # Print the summary of the fitted model
+        """Print a summary of the results."""
         summary = ro.r.summary(self.result)
         print(summary)
         return summary
 
     def plot(self):
-        # Plot the Quantile Treatment Effects (QTE) with or without confidence intervals
+        """Plot the Quantile Treatment Effects (QTE) with optional confidence intervals."""
         tau = self.info['probs']
         qte = self.info['qte']
 
@@ -97,8 +95,8 @@ class QTEEstimator:
         plt.grid(True)
         plt.show()
 
-    def get_results_dataframe(self):
-        """Creates a pandas DataFrame with the estimated results, useful for custom tables or plots."""
+    def get_results(self):
+        """Create a pandas DataFrame with the estimated results."""
         df = pd.DataFrame({
             'Quantile': self.info['probs'],
             'QTE': self.info['qte']
