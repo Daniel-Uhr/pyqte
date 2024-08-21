@@ -40,42 +40,29 @@ class QDiDEstimator:
                 self.probs = r.FloatVector(probs)
 
     def fit(self):
-        # Chamando a função QDiD do pacote qte do R
+        # Construir os argumentos da função, omitindo aqueles que são None
+        args = {
+            'formla': self.formula,
+            't': self.t,
+            'tmin1': self.tmin1,
+            'tname': self.tname,
+            'data': self.data,
+            'panel': self.panel,
+            'se': self.se,
+            'alp': self.alp,
+            'probs': self.probs,
+            'iters': self.iters,
+            'retEachIter': self.retEachIter,
+            'pl': self.pl,
+            'cores': self.cores
+        }
         if self.xformla:
-            self.result = qte.QDiD(
-                formla=self.formula,
-                xformla=self.xformla,
-                t=self.t,
-                tmin1=self.tmin1,
-                tname=self.tname,
-                data=self.data,
-                panel=self.panel,
-                se=self.se,
-                idname=self.idname,
-                alp=self.alp,
-                probs=self.probs,
-                iters=self.iters,
-                retEachIter=self.retEachIter,
-                pl=self.pl,
-                cores=self.cores
-            )
-        else:
-            self.result = qte.QDiD(
-                formla=self.formula,
-                t=self.t,
-                tmin1=self.tmin1,
-                tname=self.tname,
-                data=self.data,
-                panel=self.panel,
-                se=self.se,
-                idname=self.idname,
-                alp=self.alp,
-                probs=self.probs,
-                iters=self.iters,
-                retEachIter=self.retEachIter,
-                pl=self.pl,
-                cores=self.cores
-            )
+            args['xformla'] = self.xformla
+        if self.idname:
+            args['idname'] = self.idname
+
+        # Chamando a função QDiD do pacote qte do R
+        self.result = qte.QDiD(**{k: v for k, v in args.items() if v is not None})
         return self.result
 
     def summary(self):
