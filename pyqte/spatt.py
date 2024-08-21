@@ -1,9 +1,12 @@
-from rpy2.robjects import r, Formula
-from rpy2.robjects.packages import importr
-from rpy2.robjects import pandas2ri, FloatVector
 import pandas as pd
+import numpy as np
+import rpy2.robjects as ro
+from rpy2.robjects import pandas2ri
+from rpy2.robjects.packages import importr
+from rpy2.robjects import Formula, FloatVector
+import matplotlib.pyplot as plt
 
-# Activate the pandas conversion for rpy2
+# Activate the automatic conversion of pandas DataFrames to R data.frames
 pandas2ri.activate()
 
 # Import the R 'qte' package
@@ -13,57 +16,18 @@ class SpATT_Estimator:
     """
     SpATT_Estimator is used to estimate Spatial Average Treatment on the Treated (SpATT)
     effects using the R 'qte' package via rpy2.
-    
-    Attributes:
-    -----------
-    formula : str
-        The formula representing the relationship between the dependent and independent variables.
-    xformla : str or None
-        An optional formula for additional covariates to adjust for.
-    data : pandas.DataFrame
-        The dataset containing the variables used in the formula.
-    t : int
-        The time period after treatment.
-    tmin1 : int
-        The time period before treatment.
-    tname : str
-        The name of the column representing the time periods.
-    w : array-like or None
-        An optional vector of sampling weights.
-    panel : bool
-        Whether the data is panel or repeated cross sections.
-    idname : str or None
-        The name of the column representing the unique identifier for each unit.
-    iters : int
-        The number of bootstrap iterations to compute standard errors.
-    alp : float
-        The significance level used for constructing bootstrap confidence intervals.
-    method : str
-        The method for estimating the propensity score when covariates are included (e.g., "logit").
-    plot : bool
-        Whether or not to plot the estimated QTET.
-    se : bool
-        Whether to compute standard errors.
-    retEachIter : bool
-        Whether or not to return results from each iteration of the bootstrap procedure.
-    seedvec : array-like or None
-        Optional value to set a random seed, can be used in conjunction with bootstrapping standard errors.
-    pl : bool
-        Whether or not to compute bootstrap errors in parallel.
-    cores : int or None
-        The number of cores to use if computing bootstrap standard errors in parallel.
     """
-
+    
     def __init__(self, formula, data, t, tmin1, tname, xformla=None, w=None, panel=False, idname=None, 
                  iters=100, alp=0.05, method="logit", plot=False, se=True, 
                  retEachIter=False, seedvec=None, pl=False, cores=2):
-        self.formula = Formula(formula)
-        self.data = pandas2ri.py2rpy(data)
+        self.formula = formula
+        self.data = data
         self.t = t
         self.tmin1 = tmin1
         self.tname = tname
-        self.xformla = Formula(xformla) if xformla else None
-        self.w = FloatVector(w) if w is not None else None
+        self.xformla = xformla
+        self.w = w
         self.panel = panel
         self.idname = idname
         self.iters = iters
@@ -72,95 +36,108 @@ class SpATT_Estimator:
         self.plot = plot
         self.se = se
         self.retEachIter = retEachIter
-        self.seedvec = FloatVector(seedvec) if seedvec is not None else None
+        self.seedvec = seedvec
         self.pl = pl
         self.cores = cores
+        self.result = None
+        self.info = {}
 
-    def estimate(self):
-        """
-        Estimate the Spatial Average Treatment on the Treated (SpATT) effect.
+    def fit(self):
+        r_formula = Formula(self.formula)
+        r_data = pandas2ri.py2rpy(self.data)
         
-        Returns:
-        --------
-        result : R object
-            The result of the SpATT estimation, which can be further processed or summarized.
-        """
-        result = qte.spatt(
-            formla=self.formula,
-            xformla=self.xformla,
-            t=self.t,
-            tmin1=self.tmin1,
-            tname=self.tname,
-            data=self.data,
-            w=self.w,
-            panel=self.panel,
-            idname=self.idname,
-            iters=self.iters,
-            alp=self.alp,
-            method=self.method,
-            plot=self.plot,
-            se=self.se,
-            retEachIter=self.retEachIter,
-            seedvec=self.seedvec,
-            pl=self.pl,
-            cores=self.cores
+        additional_args = {
+            't': self.t,
+            'tmin1': self.tmin1,
+            'tname': self.tname,
+            'se': self.se,
+            'iters': self.iters,
+            'alp': self.alp,
+            'method': self.method,
+            'plot': self.plot,
+            'retEachIter': self.retEachIter,
+            'pl': self.pl,
+            'cores': self.cores
+        }
+
+        if self.xformla:
+            additional_args['xformla'] = Formula(self.xformla)
+        
+        if self.w is not None:
+            additional_args['w'] = FloatVector(self.w)
+
+        if self.idname:
+            additional_args['idname'] = self.idname
+        
+        if self.seedvec is not None:
+            additional_args['seedvec'] = FloatVector(self.seedvec)
+
+        if self.panel:
+            additional_args['panel'] = self.panel
+
+        self.result = qte.spatt(
+            formla=r_formula,
+            data=r_data,
+            **additional_args
         )
-        return result
+        self._extract_info()
 
-    def summary(self, result):
-        """
-        Print a summary of the SpATT estimation result.
-        
-        Parameters:
-        -----------
-        result : R object
-            The result from the SpATT estimation to be summarized.
-        """
-        return r['summary'](result)
-    
-    def plot(self, result):
-        """
-        Plot the SpATT estimation results.
-        
-        Parameters:
-        -----------
-        result : R object
-            The result from the SpATT estimation to be plotted.
-        """
-        r['plot'](result)
-
-    def get_results(self, result):
-        """
-        Extract the results from the SpATT estimation and return as a pandas DataFrame.
-        
-        Parameters:
-        -----------
-        result : R object
-            The result from the SpATT estimation from which to extract data.
-        
-        Returns:
-        --------
-        results_df : pandas.DataFrame
-            A DataFrame containing the extracted results.
-        """
-        qte_values = np.array(result.rx2('qte'))
-        probs = np.array(result.rx2('probs'))
+    def _extract_info(self):
+        self.info['qte'] = np.array(self.result.rx2('qte'))
+        self.info['probs'] = np.array(self.result.rx2('probs'))
 
         if self.se:
-            lower_bound = np.array(result.rx2('qte.lower'))
-            upper_bound = np.array(result.rx2('qte.upper'))
-            results_df = pd.DataFrame({
-                'Quantile': probs,
-                'QTE': qte_values,
-                'QTE Lower Bound': lower_bound,
-                'QTE Upper Bound': upper_bound
-            })
+            self.info['qte.lower'] = np.array(self.result.rx2('qte.lower'))
+            self.info['qte.upper'] = np.array(self.result.rx2('qte.upper'))
         else:
-            results_df = pd.DataFrame({
-                'Quantile': probs,
-                'QTE': qte_values
-            })
+            self.info['qte.lower'] = None
+            self.info['qte.upper'] = None
+
+    def summary(self):
+        if self.result is None:
+            raise ValueError("Model has not been fitted yet. Call `fit()` before calling `summary()`.")
+        summary = ro.r.summary(self.result)
+        print(summary)
+        return summary
+
+    def plot(self):
+        if self.result is None:
+            raise ValueError("Model has not been fitted yet. Call `fit()` before calling `plot()`.")
         
-        return results_df
+        tau = self.info['probs']
+        qte = self.info['qte']
+
+        plt.figure(figsize=(10, 6))
+        plt.plot(tau, qte, 'o-', label="SpATT")
+
+        if self.se:
+            if self.info['qte.lower'] is not None and self.info['qte.upper'] is not None:
+                lower_bound = self.info['qte.lower']
+                upper_bound = self.info['qte.upper']
+                plt.fill_between(tau, lower_bound, upper_bound, color='gray', alpha=0.2, label="95% CI")
+            else:
+                print("Confidence intervals are not available. Plotting only QTE values.")
+
+        plt.axhline(y=0, color='r', linestyle='--', label="No Effect Line")
+        plt.xlabel('Quantiles')
+        plt.ylabel('SpATT Estimates')
+        plt.title('Spatial Average Treatment on the Treated (SpATT)')
+        plt.legend()
+        plt.grid(True)
+        plt.show()
+
+    def get_results(self):
+        """Create a pandas DataFrame with the estimated results."""
+        df = pd.DataFrame({
+            'Quantile': self.info['probs'],
+            'QTE': self.info['qte']
+        })
+        
+        if self.se and self.info['qte.lower'] is not None and self.info['qte.upper'] is not None:
+            df['QTE Lower Bound'] = self.info['qte.lower']
+            df['QTE Upper Bound'] = self.info['qte.upper']
+        
+        return df
+
 
 
