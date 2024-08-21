@@ -6,10 +6,10 @@ from rpy2.robjects import pandas2ri
 from rpy2.robjects.conversion import localconverter
 import matplotlib.pyplot as plt
 
-# Ativando a conversão automática de pandas DataFrames para R data.frames
+# Activate automatic conversion of pandas DataFrames to R data.frames
 pandas2ri.activate()
 
-# Importando o pacote qte do R
+# Import the qte package from R
 qte = importr('qte')
 
 class DDID2Estimator:
@@ -24,7 +24,7 @@ class DDID2Estimator:
         self.tname = tname
         self.idname = idname
         
-        # Processar 'probs' como um vetor numérico em R
+        # Process 'probs' as a numeric vector in R
         if isinstance(probs, list) and len(probs) == 3:
             self.probs = np.arange(probs[0], probs[1] + probs[2], probs[2])
         else:
@@ -71,7 +71,7 @@ class DDID2Estimator:
         if self.seedvec is not None:
             additional_args['seedvec'] = self.seedvec
 
-        # Remover chaves que estão com valores None para evitar o erro
+        # Remove keys with None values to avoid errors
         additional_args = {k: v for k, v in additional_args.items() if v is not None}
 
         self.result = qte.ddid2(
@@ -105,9 +105,9 @@ class DDID2Estimator:
                 if np.issubdtype(lower_bound.dtype, np.number) and np.issubdtype(upper_bound.dtype, np.number):
                     plt.fill_between(tau, lower_bound, upper_bound, color='gray', alpha=0.2, label="95% CI")
                 else:
-                    print("Intervalos de confiança contêm valores não numéricos. Plotagem omitida.")
+                    print("Confidence intervals contain non-numeric values. Plotting omitted.")
             else:
-                print("Intervalos de confiança não estão disponíveis. Plotando apenas os valores de QTE.")
+                print("Confidence intervals are not available. Plotting only QTE values.")
 
         plt.axhline(y=0, color='r', linestyle='--', label="No Effect Line")
         plt.xlabel('Quantiles')
@@ -121,22 +121,24 @@ class DDID2Estimator:
         if self.result is None:
             raise ValueError("Model has not been fitted yet. Call `fit()` before calling `get_results()`.")
 
-        # Extrair os resultados e convertê-los em um DataFrame
+        # Extract results and convert to a DataFrame
         qte = np.array(self.result.rx2('qte'))
         probs = np.array(self.result.rx2('probs'))
 
-        # Verificar se existem intervalos de confiança
-        if 'qte.lower' in self.result.names and 'qte.upper' in self.result.names:
+        if self.se and 'qte.lower' in self.result.names and 'qte.upper' in self.result.names:
             lower_bound = np.array(self.result.rx2('qte.lower'))
             upper_bound = np.array(self.result.rx2('qte.upper'))
+            results_df = pd.DataFrame({
+                'Quantile': probs,
+                'QTE': qte,
+                'QTE Lower Bound': lower_bound,
+                'QTE Upper Bound': upper_bound
+            })
         else:
-            lower_bound = upper_bound = np.zeros_like(qte)
-
-        results_df = pd.DataFrame({
-            'Quantile': probs,
-            'QTE': qte,
-            'QTE Lower Bound': lower_bound,
-            'QTE Upper Bound': upper_bound
-        })
+            results_df = pd.DataFrame({
+                'Quantile': probs,
+                'QTE': qte
+            })
 
         return results_df
+
