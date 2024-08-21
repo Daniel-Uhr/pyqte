@@ -7,10 +7,10 @@ from rpy2.robjects import Formula
 from rpy2.robjects.conversion import localconverter
 import matplotlib.pyplot as plt
 
-# Ativar a conversão automática de pandas DataFrames para R data.frames
+# Activate the automatic conversion of pandas DataFrames to R data.frames
 pandas2ri.activate()
 
-# Importar o pacote qte do R
+# Import the 'qte' package from R
 qte = importr('qte')
 
 class CiCEstimator:
@@ -23,7 +23,7 @@ class CiCEstimator:
         self.idname = idname
         self.xformla = xformla
         
-        # Processar 'probs' como um vetor numérico em R
+        # Process 'probs' as a numeric vector in R
         if isinstance(probs, list) and len(probs) == 3:
             self.probs = ro.FloatVector(np.arange(probs[0], probs[1] + probs[2], probs[2]))
         else:
@@ -54,7 +54,7 @@ class CiCEstimator:
         if self.panel:
             additional_args['panel'] = self.panel
 
-        # Chama a função CiC do pacote qte do R
+        # Call the CiC function from the 'qte' package in R
         self.result = qte.CiC(
             formla=r_formula,
             t=self.t,
@@ -92,14 +92,14 @@ class CiCEstimator:
         tau = self.info['probs']
         cic = self.info['qte']
 
-        # Garantir que 'tau' e 'cic' tenham a mesma dimensão
+        # Ensure 'tau' and 'cic' have the same dimension
         if len(cic.shape) > 1:
             cic = cic.flatten()
 
         if len(tau) != len(cic):
             tau = np.linspace(tau[0], tau[-1], len(cic))
 
-        # Verificar se se=True para plotar com intervalos de confiança
+        # Check if se=True to plot with confidence intervals
         if self.se and self.info['qte.lower'] is not None and self.info['qte.upper'] is not None:
             lower_bound = self.info['qte.lower']
             upper_bound = self.info['qte.upper']
@@ -120,7 +120,7 @@ class CiCEstimator:
         plt.show()
 
     def get_results(self):
-        """Cria um DataFrame pandas com os resultados estimados."""
+        """Creates a pandas DataFrame with the estimated results."""
         df = pd.DataFrame({
             'Quantile': self.info['probs'],
             'QTE': self.info['qte']
@@ -131,4 +131,3 @@ class CiCEstimator:
             df['QTE Upper Bound'] = self.info['qte.upper']
         
         return df
-
