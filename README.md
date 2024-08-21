@@ -51,6 +51,9 @@ qte_estimator_1.plot()
 # Generate a data-frame with results
 res_1 = qte_estimator_1.get_results()
 ```
+
+more examples: https://github.com/Daniel-Uhr/pyqte/blob/main/docs/pyqte_examples.md
+
 ## Requirements
 
 Python 3.6 or higher
