@@ -17,7 +17,7 @@ or,
 pip install git+https://github.com/Daniel-Uhr/pyqte.git
 ```
 
-Make sure you have R installed along with the qte package and rpy2 (https://github.com/Daniel-Uhr/rpy2).
+Make sure you have R installed along with the qte package (`install.packages("qte")`)  and rpy2 (see in https://github.com/Daniel-Uhr/rpy2).
 
 ## Usage
 Here’s a basic example of how to use pyqte to estimate Quantile Treatment Effects (QTE):
