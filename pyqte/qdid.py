@@ -5,12 +5,12 @@ from rpy2.robjects import pandas2ri, Formula, FloatVector
 from rpy2.robjects.packages import importr
 import matplotlib.pyplot as plt
 
-# Ativando a conversão automática de pandas DataFrames para R data.frames
+# Activating the automatic conversion of pandas DataFrames to R data.frames
 pandas2ri.activate()
 
-# Importando o pacote qte do R
+# Importing the 'qte' package from R
 qte = importr('qte')
-r = ro.r  # Acessando o ambiente R diretamente
+r = ro.r  # Directly accessing the R environment
 
 class QDiDEstimator:
     def __init__(self, formula, data, t, tmin1, tname, idname=None, xformla=None, panel=False, se=True, alp=0.05, probs=None, iters=100, retEachIter=False, pl=False, cores=None):
@@ -29,7 +29,7 @@ class QDiDEstimator:
         self.pl = pl
         self.cores = cores
 
-        # Processar 'probs' como um vetor numérico em R
+        # Process 'probs' as a numeric vector in R
         if probs is None:
             self.probs = r.seq(0.05, 0.95, by=0.05)
         else:
@@ -39,7 +39,7 @@ class QDiDEstimator:
                 self.probs = FloatVector(probs)
 
     def fit(self):
-        # Construir os argumentos da função, omitindo aqueles que são None
+        # Construct the function arguments, omitting those that are None
         args = {
             'formla': self.formula,
             't': self.t,
@@ -61,10 +61,10 @@ class QDiDEstimator:
             args['idname'] = self.idname
 
         try:
-            # Chamando a função QDiD do pacote qte do R
+            # Calling the QDiD function from the 'qte' package in R
             self.result = qte.QDiD(**{k: v for k, v in args.items() if v is not None})
         except Exception as e:
-            raise RuntimeError(f"Erro ao executar o estimador QDiD: {e}")
+            raise RuntimeError(f"Error executing the QDiD estimator: {e}")
         return self.result
 
     def summary(self):
@@ -73,14 +73,14 @@ class QDiDEstimator:
             print(summary)
             return summary
         except Exception as e:
-            raise RuntimeError(f"Erro ao gerar o sumário: {e}")
+            raise RuntimeError(f"Error generating the summary: {e}")
 
     def plot(self):
         """
-        Plota as estimativas do QDiD com intervalos de confiança, se disponíveis.
+        Plots the QDiD estimates with confidence intervals, if available.
         """
         try:
-            # Extraindo os dados do resultado
+            # Extracting the data from the result
             tau = np.linspace(0.05, 0.95, len(self.result.rx2('qte')))
             qte = np.nan_to_num(np.array(self.result.rx2('qte')), nan=0.0)
             lower_bound = upper_bound = None
@@ -89,7 +89,7 @@ class QDiDEstimator:
                 lower_bound = np.nan_to_num(np.array(self.result.rx2('qte.lower')), nan=0.0)
                 upper_bound = np.nan_to_num(np.array(self.result.rx2('qte.upper')), nan=0.0)
 
-            # Criar o gráfico
+            # Create the plot
             plt.figure(figsize=(10, 6))
             plt.plot(tau, qte, 'o-', label="QTE")
 
@@ -104,11 +104,11 @@ class QDiDEstimator:
             plt.grid(True)
             plt.show()
         except Exception as e:
-            raise RuntimeError(f"Erro ao plotar os resultados: {e}")
+            raise RuntimeError(f"Error plotting the results: {e}")
 
     def get_results(self):
         """
-        Retorna os resultados como um DataFrame do pandas.
+        Returns the results as a pandas DataFrame.
         """
         try:
             results_df = pd.DataFrame({
@@ -119,4 +119,5 @@ class QDiDEstimator:
             })
             return results_df
         except Exception as e:
-            raise RuntimeError(f"Erro ao obter os resultados: {e}")
+            raise RuntimeError(f"Error retrieving the results: {e}")
+
