@@ -30,7 +30,13 @@ class QDiDEstimator:
         self.cores = cores
 
         # Processar 'probs' como um vetor numérico em R
-        self.probs = r.seq(0.05, 0.95, by=0.05) if probs is None else FloatVector(probs)
+        if probs is None:
+            self.probs = r.seq(0.05, 0.95, by=0.05)
+        else:
+            if len(probs) == 3:
+                self.probs = r.seq(probs[0], probs[1], by=probs[2])
+            else:
+                self.probs = FloatVector(probs)
 
     def fit(self):
         # Construir os argumentos da função, omitindo aqueles que são None
@@ -114,4 +120,3 @@ class QDiDEstimator:
             return results_df
         except Exception as e:
             raise RuntimeError(f"Erro ao obter os resultados: {e}")
-
