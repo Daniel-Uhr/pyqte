@@ -114,3 +114,4 @@ class QDiDEstimator:
             return results_df
         except Exception as e:
             raise RuntimeError(f"Erro ao obter os resultados: {e}")
+
