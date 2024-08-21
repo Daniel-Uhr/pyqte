@@ -31,13 +31,7 @@ class QDiDEstimator:
         self.cores = cores
 
         # Processar 'probs' como um vetor numérico em R
-        if probs is None:
-            self.probs = r.seq(0.05, 0.95, by=0.05)
-        else:
-            if len(probs) == 3:
-                self.probs = r.seq(probs[0], probs[1], by=probs[2])
-            else:
-                self.probs = r.FloatVector(probs)
+        self.probs = r.seq(0.05, 0.95, by=0.05) if probs is None else r.FloatVector(probs)
 
     def fit(self):
         # Construir os argumentos da função, omitindo aqueles que são None
@@ -61,55 +55,63 @@ class QDiDEstimator:
         if self.idname:
             args['idname'] = self.idname
 
-        # Chamando a função QDiD do pacote qte do R
-        self.result = qte.QDiD(**{k: v for k, v in args.items() if v is not None})
+        try:
+            # Chamando a função QDiD do pacote qte do R
+            self.result = qte.QDiD(**{k: v for k, v in args.items() if v is not None})
+        except Exception as e:
+            raise RuntimeError(f"Erro ao executar o estimador QDiD: {e}")
         return self.result
 
     def summary(self):
-        summary = r.summary(self.result)
-        print(summary)
-        return summary
+        try:
+            summary = r.summary(self.result)
+            print(summary)
+            return summary
+        except Exception as e:
+            raise RuntimeError(f"Erro ao gerar o sumário: {e}")
 
     def plot(self):
         """
         Plota as estimativas do QDiD com intervalos de confiança, se disponíveis.
         """
-        # Extraindo os dados do resultado
-        tau = np.linspace(0.05, 0.95, len(self.result.rx2('qte')))
-        qte = np.array(self.result.rx2('qte'))
-        lower_bound = np.array(self.result.rx2('qte.lower')) if self.se else None
-        upper_bound = np.array(self.result.rx2('qte.upper')) if self.se else None
+        try:
+            # Extraindo os dados do resultado
+            tau = np.linspace(0.05, 0.95, len(self.result.rx2('qte')))
+            qte = np.nan_to_num(np.array(self.result.rx2('qte')), nan=0.0)
+            lower_bound = upper_bound = None
+            
+            if self.se:
+                lower_bound = np.nan_to_num(np.array(self.result.rx2('qte.lower')), nan=0.0)
+                upper_bound = np.nan_to_num(np.array(self.result.rx2('qte.upper')), nan=0.0)
 
-        # Substituir valores inválidos (NaN) por zero
-        qte = np.nan_to_num(qte, nan=0.0)
-        if self.se:
-            lower_bound = np.nan_to_num(lower_bound, nan=0.0)
-            upper_bound = np.nan_to_num(upper_bound, nan=0.0)
+            # Criar o gráfico
+            plt.figure(figsize=(10, 6))
+            plt.plot(tau, qte, 'o-', label="QTE")
 
-        # Criar o gráfico
-        plt.figure(figsize=(10, 6))
-        plt.plot(tau, qte, 'o-', label="QTE")
-
-        if self.se:
-            plt.fill_between(tau, lower_bound, upper_bound, color='gray', alpha=0.2, label="95% CI")
-        
-        plt.axhline(y=0, color='r', linestyle='--', label="No Effect Line")
-        plt.xlabel('Quantiles')
-        plt.ylabel('QTE Estimates')
-        plt.title('Quantile Treatment Effects (QDiD)')
-        plt.legend()
-        plt.grid(True)
-        plt.show()
+            if self.se:
+                plt.fill_between(tau, lower_bound, upper_bound, color='gray', alpha=0.2, label="95% CI")
+            
+            plt.axhline(y=0, color='r', linestyle='--', label="No Effect Line")
+            plt.xlabel('Quantiles')
+            plt.ylabel('QTE Estimates')
+            plt.title('Quantile Treatment Effects (QDiD)')
+            plt.legend()
+            plt.grid(True)
+            plt.show()
+        except Exception as e:
+            raise RuntimeError(f"Erro ao plotar os resultados: {e}")
 
     def get_results(self):
         """
         Retorna os resultados como um DataFrame do pandas.
         """
-        results_df = pd.DataFrame({
-            'Quantile': np.linspace(0.05, 0.95, len(self.result.rx2('qte'))),
-            'QTE': np.array(self.result.rx2('qte')),
-            'QTE Lower Bound': np.array(self.result.rx2('qte.lower')) if self.se else np.nan,
-            'QTE Upper Bound': np.array(self.result.rx2('qte.upper')) if self.se else np.nan
-        })
-        return results_df
-
+        try:
+            results_df = pd.DataFrame({
+                'Quantile': np.linspace(0.05, 0.95, len(self.result.rx2('qte'))),
+                'QTE': np.nan_to_num(np.array(self.result.rx2('qte')), nan=0.0),
+                'QTE Lower Bound': np.nan_to_num(np.array(self.result.rx2('qte.lower')), nan=0.0) if self.se else np.nan,
+                'QTE Upper Bound': np.nan_to_num(np.array(self.result.rx2('qte.upper')), nan=0.0) if self.se else np.nan
+            })
+            return results_df
+        except Exception as e:
+            raise RuntimeError(f"Erro ao obter os resultados: {e}")
