@@ -11,7 +11,7 @@ pandas2ri.activate()
 qte = importr('qte')
 
 class PanelQTETEstimator:
-    def __init__(self, formula, data, t, tmin1, tmin2, idname, tname, probs=None, se=False, iters=100, method="pscore"):
+    def __init__(self, formula, data, t, tmin1, tmin2, idname, tname, xformla=None, probs=None, se=False, iters=100, method="pscore"):
         self.formula = Formula(formula)
         self.data = pandas2ri.py2rpy(data)
         self.t = t
@@ -19,6 +19,7 @@ class PanelQTETEstimator:
         self.tmin2 = tmin2
         self.idname = idname
         self.tname = tname
+        self.xformla = Formula(xformla) if xformla is not None else None
         self.se = se
         self.iters = iters
         self.method = method
@@ -48,6 +49,7 @@ class PanelQTETEstimator:
             idname=self.idname,
             tname=self.tname,
             data=self.data,
+            xformla=self.xformla,
             probs=self.probs,
             se=self.se,
             iters=self.iters,
