@@ -13,7 +13,7 @@ __all__ = [
     'QDiDEstimator',
     'CiCEstimator',
     'MDiDEstimator',
-    'SpATT',
+    'SpATTEstimator',
     'DDID2Estimator',  # Incluindo DDID2Estimator
     'compute_ci_qte',
     'compute_panel_qtet',
