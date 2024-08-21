@@ -5,7 +5,7 @@
 Before installing the `pyqte` package, ensure you have the following prerequisites installed:
 
 - **Python 3.7 or higher**
-- **R and Rpy2**: The package depends on `R` and `rpy2` to interface with the `qte` package in R. Ensure R is installed on your system, and the `rpy2` package is available.
+- **R and Rpy2**: The package depends on `R` and `rpy2` to interface with the `qte` package in R. Ensure R is installed on your system, and the `rpy2` package is available (https://github.com/Daniel-Uhr/rpy2).
 
 ### Installing R and Rpy2
 
