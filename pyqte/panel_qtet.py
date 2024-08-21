@@ -2,9 +2,10 @@ from rpy2.robjects import r, Formula
 from rpy2.robjects.packages import importr
 from rpy2.robjects import pandas2ri
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 
-# Ativar a conversão de pandas para R DataFrame
+# Ativar a conversão pandas para R DataFrame
 pandas2ri.activate()
 
 # Importar o pacote 'qte' do R
@@ -19,10 +20,7 @@ class PanelQTETEstimator:
         self.tmin2 = tmin2
         self.idname = idname
         self.tname = tname
-        self.xformla = Formula(xformla) if xformla is not None else None
-        self.se = se
-        self.iters = iters
-        self.method = method
+        self.xformla = Formula(xformla) if xformla else None
         
         # Processar 'probs' como um vetor numérico em R
         if probs is None:
@@ -32,29 +30,42 @@ class PanelQTETEstimator:
                 self.probs = r.seq(probs[0], probs[1], by=probs[2])
             else:
                 self.probs = r.FloatVector(probs)
-
-        self.result = None
+        
+        self.se = se
+        self.iters = iters
+        self.method = method
 
     def fit(self):
-        # Verificação para garantir que todos os parâmetros obrigatórios estejam definidos
-        if self.formula is None or self.data is None or self.t is None or self.tmin1 is None or self.tmin2 is None or self.idname is None or self.tname is None:
-            raise ValueError("Todos os parâmetros obrigatórios devem ser fornecidos e não devem ser None.")
-
-        # Chamando a função 'panel_qtet' do pacote 'qte'
-        self.result = qte.panel_qtet(
-            formla=self.formula,
-            t=self.t,
-            tmin1=self.tmin1,
-            tmin2=self.tmin2,
-            idname=self.idname,
-            tname=self.tname,
-            data=self.data,
-            xformla=self.xformla,
-            probs=self.probs,
-            se=self.se,
-            iters=self.iters,
-            method=self.method
-        )
+        # Verificar se xformla é None e ajustar a chamada ao R
+        if self.xformla is None:
+            self.result = qte.panel_qtet(
+                formla=self.formula,
+                t=self.t,
+                tmin1=self.tmin1,
+                tmin2=self.tmin2,
+                idname=self.idname,
+                tname=self.tname,
+                data=self.data,
+                probs=self.probs,
+                se=self.se,
+                iters=self.iters,
+                method=self.method
+            )
+        else:
+            self.result = qte.panel_qtet(
+                formla=self.formula,
+                t=self.t,
+                tmin1=self.tmin1,
+                tmin2=self.tmin2,
+                idname=self.idname,
+                tname=self.tname,
+                data=self.data,
+                xformla=self.xformla,
+                probs=self.probs,
+                se=self.se,
+                iters=self.iters,
+                method=self.method
+            )
         return self.result
 
     def summary(self):
@@ -85,11 +96,6 @@ class PanelQTETEstimator:
         plt.show()
 
     def get_results(self):
-        """
-        Retorna os resultados como um DataFrame do pandas.
-        """
-        import pandas as pd  # Importação do pandas
-
         results_df = pd.DataFrame({
             'Quantile': np.linspace(0.05, 0.95, len(self.result.rx2('qte'))),
             'QTE': np.array(self.result.rx2('qte')),
