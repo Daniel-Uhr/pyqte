@@ -6,10 +6,10 @@ from rpy2.robjects.packages import importr
 from rpy2.robjects import Formula
 import matplotlib.pyplot as plt
 
-# Ativar a conversão automática de pandas DataFrames para R data.frames
+# Activate automatic conversion of pandas DataFrames to R data.frames
 pandas2ri.activate()
 
-# Importar o pacote qte do R
+# Import the qte package from R
 qte = importr('qte')
 
 class MDiDEstimator:
@@ -84,9 +84,9 @@ class MDiDEstimator:
                 if np.issubdtype(lower_bound.dtype, np.number) and np.issubdtype(upper_bound.dtype, np.number):
                     plt.fill_between(tau, lower_bound, upper_bound, color='gray', alpha=0.2, label="95% CI")
                 else:
-                    print("Intervalos de confiança contêm valores não numéricos. Plotagem omitida.")
+                    print("Confidence intervals contain non-numeric values. Plotting omitted.")
             else:
-                print("Intervalos de confiança não estão disponíveis. Plotando apenas os valores de QTE.")
+                print("Confidence intervals are not available. Plotting only the MDiD values.")
 
         plt.axhline(y=0, color='r', linestyle='--', label="No Effect Line")
         plt.xlabel('Quantiles')
@@ -98,17 +98,20 @@ class MDiDEstimator:
 
     def get_results(self):
         """
-        Retorna os resultados como um DataFrame pandas para análises adicionais.
+        Returns the results as a pandas DataFrame for further analysis.
         """
         if self.result is None:
             raise ValueError("Model has not been fitted yet. Call `fit()` before calling `get_results()`.")
 
         data = {
             'Quantile': np.array(self.probs),
-            'MDiD': np.array(self.result.rx2('qte')),
-            'MDiD Lower Bound': np.array(self.result.rx2('qte.lower')) if 'qte.lower' in self.result.names else None,
-            'MDiD Upper Bound': np.array(self.result.rx2('qte.upper')) if 'qte.upper' in self.result.names else None,
+            'MDiD': np.array(self.result.rx2('qte'))
         }
+        
+        if self.se and 'qte.lower' in self.result.names and 'qte.upper' in self.result.names:
+            data['MDiD Lower Bound'] = np.array(self.result.rx2('qte.lower'))
+            data['MDiD Upper Bound'] = np.array(self.result.rx2('qte.upper'))
+
         return pd.DataFrame(data)
 
 
