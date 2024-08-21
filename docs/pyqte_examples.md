@@ -65,9 +65,9 @@ qte_estimator_2 = QTEEstimator(
     formula='re78 ~ treat', 
     xformla='~ age + I(age^2) + education + black + hispanic + married + nodegree',  # Covariáveis adicionais
     data=lalonde_psid, 
-    probs=[0.05, 0.95, 0.05],  # Quantis de interesse
-    se=True,                  # Não calcular erros padrão
-    iters=100                  # Número de iterações do bootstrap
+    probs=[0.05, 0.95, 0.05],  
+    se=True,                  
+    iters=100                 
 )
 
 qte_estimator_2.fit()
@@ -88,17 +88,16 @@ This method implements estimates the Quantile Treatment Effect on the Treated (Q
 from pyqte.qtet import QTETEstimator
 import pandas as pd
 
-# Carregar os dados
 lalonde_psid = pd.read_csv("https://github.com/Daniel-Uhr/data/raw/main/lalonde_psid.csv")
 
 # Inicializar o estimador QTET sem covariáveis
 qtet_estimator_1 = QTETEstimator(
     formula='re78 ~ treat', 
-    xformla=None,  # Sem covariáveis adicionais
+    xformla=None,  
     data=lalonde_psid, 
-    probs=[0.05, 0.95, 0.05],   # Quantis de interesse
-    se=True,                    # Não calcular erros padrão
-    iters=10                    # Número de iterações do bootstrap
+    probs=[0.05, 0.95, 0.05],   
+    se=True,                   
+    iters=10                   
 )
 
 qtet_estimator_1.fit()
@@ -113,17 +112,15 @@ qtet_estimator_1.get_results()
 from pyqte.qtet import QTETEstimator
 import pandas as pd
 
-# Carregar os dados
 lalonde_psid = pd.read_csv("https://github.com/Daniel-Uhr/data/raw/main/lalonde_psid.csv")
 
-# Inicializar o estimador QTET com covariáveis
 qtet_estimator_2 = QTETEstimator(
     formula='re78 ~ treat', 
     xformla='~ age + I(age**2) + education + black + hispanic + married + nodegree', 
     data=lalonde_psid, 
-    probs=[0.05, 0.95, 0.05],  # Quantis de interesse
-    se=True,                  # Não calcular erros padrão
-    iters=100                  # Número de iterações do bootstrap
+    probs=[0.05, 0.95, 0.05],  
+    se=True,                  
+    iters=100               
 )
 
 qtet_estimator_2.fit()
@@ -144,10 +141,8 @@ CiCEstimator computes the Quantile Treatment Effect on the Treated (QTET) using 
 from pyqte.cic import CiCEstimator
 import pandas as pd
 
-# Carregar os dados
 lalonde_psid_panel = pd.read_csv("https://github.com/Daniel-Uhr/data/raw/main/lalonde_psid_panel.csv")
 
-# Inicialize o estimador CiC com as mesmas configurações do exemplo em R
 cic_estimator = CiCEstimator(
     formula='re ~ treat',
     data=lalonde_psid_panel,
@@ -157,8 +152,8 @@ cic_estimator = CiCEstimator(
     idname='id',
     xformla='~ age + I(age**2) + education + black + hispanic + married + nodegree',
     se=True,  # Não calcular erros padrão
-    probs=[0.05, 0.95, 0.05],  # Quantis de interesse
-    iters=10                  # Número de iterações do bootstrap
+    probs=[0.05, 0.95, 0.05],  
+    iters=10                 
 )
 
 cic_estimator.fit()
@@ -181,7 +176,6 @@ import pandas as pd
 
 lalonde_psid_panel = pd.read_csv("https://github.com/Daniel-Uhr/data/raw/main/lalonde_psid_panel.csv")
 
-# Inicializar o estimador DDID2 com as mesmas configurações do exemplo em R
 ddid2_estimator_1 = DDID2Estimator(
     formula='re ~ treat',
     data=lalonde_psid_panel,
@@ -208,10 +202,8 @@ ddid2_estimator_1.get_results()
 from pyqte.ddid2 import DDID2Estimator
 import pandas as pd
 
-# Carregar os dados
 lalonde_psid_panel = pd.read_csv("https://github.com/Daniel-Uhr/data/raw/main/lalonde_psid_panel.csv")
 
-# Inicializar o estimador DDID2 com fórmula e covariáveis
 ddid2_estimator_2 = DDID2Estimator(
     formula='re ~ treat',
     xformla='~ age + I(age**2) + education + black + hispanic + married + nodegree',
@@ -243,10 +235,8 @@ MDiDEstimator is a Difference in Differences type method for computing the QTET.
 from pyqte.mdid import MDiDEstimator
 import pandas as pd
 
-# Carregar os dados
 lalonde_psid_panel = pd.read_csv("https://github.com/Daniel-Uhr/data/raw/main/lalonde_psid_panel.csv")
 
-# Inicializar o estimador MDiD com covariáveis
 mdid_estimator = MDiDEstimator(
     formula='re ~ treat',
     xformla='~ age + I(age**2) + education + black + hispanic + married + nodegree',
@@ -314,8 +304,8 @@ pq2 = PanelQTETEstimator(
     tmin2=1974,
     tname='year',
     idname='id',
-    se=True,  # Não calcular erros padrão
-    probs=[0.05, 0.95, 0.05]  # Quantis de interesse
+    se=True, 
+    probs=[0.05, 0.95, 0.05]  
 )
 
 pq2.fit()
@@ -405,8 +395,8 @@ qdid_estimator = QDiDEstimator(
     tmin1=1975,
     tname='year',
     idname='id',
-    se=True,  # Não calcular erros padrão
-    probs=[0.05, 0.95, 0.05],  # Quantis de interesse
+    se=True,  
+    probs=[0.05, 0.95, 0.05], 
     iters=10
 )
 
@@ -428,16 +418,15 @@ import pandas as pd
 
 lalonde_psid_panel = pd.read_csv("https://github.com/Daniel-Uhr/data/raw/main/lalonde_psid_panel.csv")
 
-# Inicializar o estimador SpATT sem covariáveis
 spatt_estimator = SpATTEstimator(
-    formula='re ~ treat',    # Fórmula especificando o resultado e o tratamento
-    data=lalonde_psid_panel, # Conjunto de dados
-    t=1978,                  # Período após o tratamento
-    tmin1=1975,              # Período antes do tratamento
-    tname='year',            # Nome da coluna que contém os períodos de tempo
-    xformla=None,            # Nenhuma covariável adicional (x=NULL em R)
-    idname='id',             # Nome da coluna que contém os identificadores únicos
-    se=False                 # Não calcular erros padrão
+    formula='re ~ treat',    
+    data=lalonde_psid_panel, 
+    t=1978,                 
+    tmin1=1975,            
+    tname='year',           
+    xformla=None,           
+    idname='id',           
+    se=False              
 )
 
 spatt_estimator.fit()
