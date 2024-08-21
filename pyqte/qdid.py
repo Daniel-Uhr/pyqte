@@ -125,3 +125,4 @@ class QDiDEstimator:
             'QTE Upper Bound': np.array(self.result.rx2('qte.upper')) if self.se else np.nan
         })
         return results_df
+
