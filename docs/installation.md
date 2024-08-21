@@ -44,14 +44,7 @@ Installing via pip
 If pyqte is available on PyPI, you can install it directly using pip:
 
 ```bash
-pip install pyqte
-```
-
-Verifying the Installation
-After installation, you can verify that the package is working correctly by running the included tests:
-
-```bash
-pytest tests/
+pip install git+https://github.com/Daniel-Uhr/pyqte.git
 ```
 
 If all tests pass, your installation is successful, and you can start using the pyqte package.
