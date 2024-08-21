@@ -13,10 +13,7 @@ pandas2ri.activate()
 qte = importr('qte')
 
 class MDiDEstimator:
-    """
-    MDiDEstimator is used to estimate Quantile Difference-in-Differences (MDiD) effects using the R 'qte' package via rpy2.
-    """
-    
+   
     def __init__(self, formula, data, t, tmin1, idname, tname, probs=[0.05, 0.95, 0.05], se=True, iters=100, xformla=None, panel=False, alp=0.05, retEachIter=False):
         self.formula = formula
         self.data = data
