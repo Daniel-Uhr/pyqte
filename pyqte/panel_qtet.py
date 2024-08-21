@@ -40,20 +40,35 @@ class PanelQTETEstimator:
             raise ValueError("Todos os parâmetros obrigatórios devem ser fornecidos e não devem ser None.")
 
         # Chamando a função 'panel_qtet' do pacote 'qte'
-        self.result = qte.panel_qtet(
-            formla=self.formula,
-            t=self.t,
-            tmin1=self.tmin1,
-            tmin2=self.tmin2,
-            idname=self.idname,
-            tname=self.tname,
-            data=self.data,
-            xformla=self.xformla,
-            probs=self.probs,
-            se=self.se,
-            iters=self.iters,
-            method=self.method
-        )
+        if self.xformla:
+            self.result = qte.panel_qtet(
+                formla=self.formula,
+                t=self.t,
+                tmin1=self.tmin1,
+                tmin2=self.tmin2,
+                idname=self.idname,
+                tname=self.tname,
+                data=self.data,
+                xformla=self.xformla,
+                probs=self.probs,
+                se=self.se,
+                iters=self.iters,
+                method=self.method
+            )
+        else:
+            self.result = qte.panel_qtet(
+                formla=self.formula,
+                t=self.t,
+                tmin1=self.tmin1,
+                tmin2=self.tmin2,
+                idname=self.idname,
+                tname=self.tname,
+                data=self.data,
+                probs=self.probs,
+                se=self.se,
+                iters=self.iters,
+                method=self.method
+            )
         return self.result
 
     def summary(self):
@@ -103,3 +118,4 @@ class PanelQTETEstimator:
             'QTE Upper Bound': np.array(self.result.rx2('qte.upper')) if self.se else np.nan
         })
         return results_df
+
