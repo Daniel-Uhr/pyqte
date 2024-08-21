@@ -18,6 +18,7 @@ class QTEEstimator:
         self.xformla = xformla
         self.data = data
 
+        # Handle the 'probs' parameter to create a sequence or use provided values
         if isinstance(probs, list) and len(probs) == 3:
             self.probs = ro.FloatVector(np.arange(probs[0], probs[1] + probs[2], probs[2]))
         else:
@@ -28,6 +29,7 @@ class QTEEstimator:
         self.info = {}
 
     def fit(self):
+        # Convert the pandas DataFrame to R data.frame
         with localconverter(ro.default_converter + pandas2ri.converter):
             r_data = ro.conversion.py2rpy(self.data)
 
@@ -54,6 +56,7 @@ class QTEEstimator:
         self._extract_info()
 
     def _extract_info(self):
+        # Extract results from the fitted model
         self.info['qte'] = np.array(self.result.rx2('qte'))
         self.info['probs'] = np.array(self.probs)
         
@@ -65,15 +68,16 @@ class QTEEstimator:
             self.info['qte.upper'] = None
 
     def summary(self):
+        # Print the summary of the fitted model
         summary = ro.r.summary(self.result)
         print(summary)
         return summary
 
     def plot(self):
+        # Plot the Quantile Treatment Effects (QTE) with or without confidence intervals
         tau = self.info['probs']
         qte = self.info['qte']
 
-        # Verificar se se=True para plotar com intervalos de confiança
         if self.se and self.info['qte.lower'] is not None and self.info['qte.upper'] is not None:
             lower_bound = self.info['qte.lower']
             upper_bound = self.info['qte.upper']
@@ -82,7 +86,6 @@ class QTEEstimator:
             plt.plot(tau, qte, 'o-', label="QTE")
             plt.fill_between(tau, lower_bound, upper_bound, color='gray', alpha=0.2, label="95% CI")
         else:
-            # Se se=False, plotar apenas os pontos sem intervalos de confiança
             plt.figure(figsize=(10, 6))
             plt.plot(tau, qte, 'o-', label="QTE")
         
@@ -95,7 +98,7 @@ class QTEEstimator:
         plt.show()
 
     def get_results_dataframe(self):
-        """Cria um DataFrame pandas com os resultados estimados, útil para criação de tabelas ou gráficos personalizados."""
+        """Creates a pandas DataFrame with the estimated results, useful for custom tables or plots."""
         df = pd.DataFrame({
             'Quantile': self.info['probs'],
             'QTE': self.info['qte']
@@ -106,3 +109,4 @@ class QTEEstimator:
             df['QTE Upper Bound'] = self.info['qte.upper']
         
         return df
+
