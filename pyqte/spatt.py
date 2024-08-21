@@ -4,7 +4,6 @@ import rpy2.robjects as ro
 from rpy2.robjects import pandas2ri
 from rpy2.robjects.packages import importr
 from rpy2.robjects import Formula, FloatVector
-import matplotlib.pyplot as plt
 
 # Activate the automatic conversion of pandas DataFrames to R data.frames
 pandas2ri.activate()
@@ -19,7 +18,7 @@ class SpATT_Estimator:
     """
     
     def __init__(self, formula, data, t, tmin1, tname, xformla=None, w=None, panel=False, idname=None, 
-                 iters=100, alp=0.05, method="logit", plot=False, se=True, 
+                 iters=100, alp=0.05, method="logit", se=True, 
                  retEachIter=False, seedvec=None, pl=False, cores=2):
         self.formula = formula
         self.data = data
@@ -33,7 +32,6 @@ class SpATT_Estimator:
         self.iters = iters
         self.alp = alp
         self.method = method
-        self.plot = plot
         self.se = se
         self.retEachIter = retEachIter
         self.seedvec = seedvec
@@ -54,7 +52,6 @@ class SpATT_Estimator:
             'iters': self.iters,
             'alp': self.alp,
             'method': self.method,
-            'plot': self.plot,
             'retEachIter': self.retEachIter,
             'pl': self.pl,
             'cores': self.cores
@@ -99,45 +96,6 @@ class SpATT_Estimator:
         summary = ro.r.summary(self.result)
         print(summary)
         return summary
-
-    def plot(self):
-        if self.result is None:
-            raise ValueError("Model has not been fitted yet. Call `fit()` before calling `plot()`.")
-        
-        tau = self.info['probs']
-        qte = self.info['qte']
-
-        plt.figure(figsize=(10, 6))
-        plt.plot(tau, qte, 'o-', label="SpATT")
-
-        if self.se:
-            if self.info['qte.lower'] is not None and self.info['qte.upper'] is not None:
-                lower_bound = self.info['qte.lower']
-                upper_bound = self.info['qte.upper']
-                plt.fill_between(tau, lower_bound, upper_bound, color='gray', alpha=0.2, label="95% CI")
-            else:
-                print("Confidence intervals are not available. Plotting only QTE values.")
-
-        plt.axhline(y=0, color='r', linestyle='--', label="No Effect Line")
-        plt.xlabel('Quantiles')
-        plt.ylabel('SpATT Estimates')
-        plt.title('Spatial Average Treatment on the Treated (SpATT)')
-        plt.legend()
-        plt.grid(True)
-        plt.show()
-
-    def get_results(self):
-        """Create a pandas DataFrame with the estimated results."""
-        df = pd.DataFrame({
-            'Quantile': self.info['probs'],
-            'QTE': self.info['qte']
-        })
-        
-        if self.se and self.info['qte.lower'] is not None and self.info['qte.upper'] is not None:
-            df['QTE Lower Bound'] = self.info['qte.lower']
-            df['QTE Upper Bound'] = self.info['qte.upper']
-        
-        return df
 
 
 
