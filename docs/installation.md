@@ -14,7 +14,7 @@ Before installing the `pyqte` package, ensure you have the following prerequisit
 2. **Install Rpy2**: You can install `rpy2` using pip:
 
 ```bash
-pip install rpy2
+pip install git+https://github.com/Daniel-Uhr/rpy2.git
 ```
 
 Install the R qte package: Once R is installed, you can install the qte package by running the following command in your R console:
